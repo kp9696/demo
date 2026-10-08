@@ -1,15 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { useOpenParam } from "./store";
-import { QuotationComparison, useExtraPOs } from "./rfq";
 import {
-	items, purchaseOrders, requisitions, vendors, productionWeek, stations,
+	items, productionWeek, stations,
 	batteries, swapStations, swapDaily, jobCards, pnl, pnlMonths, flowStages, rfidEvents, rfidHardware,
 	inr, lakh, crore, sum, warehouses,
 } from "./data";
-import type { Item, PO } from "./data";
+import type { Item } from "./data";
 import { Page, Panel, Stat, Stats, Badge, Table, Chart, HBars, Bar, Cell, Tabs, Drawer, Facts, Timeline, Search, toast } from "./ui";
 import { go } from "./nav";
-import { GoodsReceipt, Transfers, PhysicalCount, Reconciliation } from "./pagesExtra";
+import { Transfers, PhysicalCount, Reconciliation } from "./pagesExtra";
 
 // ================= Dashboard =================
 export function Dashboard() {
@@ -226,74 +225,6 @@ export function MaterialFlow() {
 					{ key: "proto", label: "Interface", hideSm: true },
 				]} rows={rfidHardware} />
 			</Panel>
-		</Page>
-	);
-}
-
-// ================= Procurement =================
-export function Procurement() {
-	const [tab, setTab] = useState<"Purchase orders" | "Goods receipt & inspection" | "Requisitions" | "Quotation comparison" | "Vendors">("Purchase orders");
-	const [po, setPo] = useState<PO | null>(null);
-	const [extraPOs] = useExtraPOs();
-	const allPOs = [...extraPOs, ...purchaseOrders];
-	const openP = useOpenParam();
-	useEffect(() => { const p = allPOs.find((x) => x.no === openP.id); if (p) { setTab("Purchase orders"); setPo(p); } }, [openP]);
-	const open = purchaseOrders.filter((p) => p.status !== "Inspected" && p.status !== "Received");
-	return (
-		<Page title="Procurement" sub="From requisition to goods receipt and inspection"
-			actions={<button className="btn" onClick={() => toast("Draft purchase requisition PR-1884 created")}>New requisition</button>}>
-			<Stats>
-				<Stat label="Open purchase orders" value={String(open.length)} delta={lakh(sum(open.map((p) => p.value))) + " outstanding"} />
-				<Stat label="Waiting for approval" value="3" delta="Oldest 5 h" tone="warn" />
-				<Stat label="Vendor on-time delivery" value="90.2%" delta="Target 95%" tone="warn" />
-				<Stat label="Spend this month" value={crore(sum(vendors.map((v) => v.spend)))} delta="12% under budget" tone="good" />
-			</Stats>
-			<Panel right={<Tabs tabs={["Purchase orders", "Goods receipt & inspection", "Requisitions", "Quotation comparison", "Vendors"] as const} value={tab} onChange={setTab} />}>
-				{tab === "Purchase orders" && (
-					<Table cols={[
-						{ key: "no", label: "PO" },
-						{ key: "vendor", label: "Vendor" },
-						{ key: "items", label: "Main item", hideSm: true },
-						{ key: "value", label: "Value", num: true, render: (r: PO) => inr(r.value) },
-						{ key: "due", label: "Due", hideSm: true },
-						{ key: "received", label: "Received", render: (r: PO) => <span className="inline-bar"><Bar pct={r.received} />{r.received}%</span>, hideSm: true },
-						{ key: "status", label: "Status", render: (r: PO) => <Badge>{r.status}</Badge> },
-					]} rows={allPOs} onRow={setPo} />
-				)}
-				{tab === "Goods receipt & inspection" && <GoodsReceipt />}
-				{tab === "Requisitions" && (
-					<Table cols={[
-						{ key: "no", label: "Requisition" }, { key: "item", label: "Item" },
-						{ key: "qty", label: "Qty", num: true, render: (r) => r.qty.toLocaleString("en-IN") },
-						{ key: "by", label: "Raised by", hideSm: true }, { key: "need", label: "Needed by" },
-						{ key: "status", label: "Status", render: (r) => <Badge>{r.status}</Badge> },
-					]} rows={requisitions} />
-				)}
-				{tab === "Quotation comparison" && <QuotationComparison />}
-				{tab === "Vendors" && (
-					<Table cols={[
-						{ key: "name", label: "Vendor" }, { key: "category", label: "Supplies", hideSm: true }, { key: "city", label: "City", hideSm: true },
-						{ key: "otd", label: "On-time", num: true, render: (r) => <span className={r.otd < 90 ? "neg" : ""}>{r.otd}%</span> },
-						{ key: "quality", label: "Quality", num: true, render: (r) => `${r.quality}%` },
-						{ key: "spend", label: "Spend YTD", num: true, render: (r) => crore(r.spend) },
-						{ key: "rating", label: "Rating", num: true },
-					]} rows={vendors} />
-				)}
-			</Panel>
-			<Drawer open={!!po} onClose={() => setPo(null)} title={po?.no ?? ""} sub={po?.vendor}>
-				{po && (
-					<>
-						<Facts rows={[["Status", <Badge>{po.status}</Badge>], ["Main item", po.items], ["Value", inr(po.value)], ["Ordered", po.date], ["Due", po.due], ["Received", `${po.received}%`]]} />
-						<h3 className="mini">Tracking</h3>
-						<Timeline items={[
-							{ when: po.date, what: "PO created", detail: "Raised from PR-1876 by Ravi (Purchase)" },
-							{ when: po.date, what: "Approved", detail: "Plant head, then Finance" },
-							...(po.received > 0 ? [{ when: "02 Oct", what: "Dispatched by vendor", detail: "LR 55821 · ETA 2 days" }, { when: "04 Oct", what: "Goods receipt", where: "Gate G1", detail: "RFID read 412 / 412 cartons" }] : []),
-							...(po.received === 100 ? [{ when: "05 Oct", what: "Inspection passed", detail: "QI-5530, accepted into bin A-04" }] : []),
-						]} />
-					</>
-				)}
-			</Drawer>
 		</Page>
 	);
 }

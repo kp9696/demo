@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { FormEvent } from "react";
 import { grns, inspectionPlan, transfers, counts, recon, mrp, fgYard, appointments, buPnl, warehouses, items, dealers, inr, crore } from "./data";
 import { usePersist } from "./store";
+import { usePRs, usePoState } from "./procure";
 import { Badge, Table, Bar, Facts, HBars, toast } from "./ui";
 
 // ---------- Goods receipt & inspection (Procurement) ----------
@@ -11,8 +12,10 @@ export function GoodsReceipt() {
 	const [selNo, setSelNo] = useState<string | null>(grns[0].no);
 	const sel = rows.find((g) => g.no === selNo) ?? null;
 	const [checks, setChecks] = useState<Record<number, "Pass" | "Fail" | undefined>>({});
+	const [, setPoSt] = usePoState();
 	const decide = (status: string) => {
 		if (!sel) return;
+		if (status !== "Rejected") setPoSt((s) => ({ ...s, [sel.po]: { ...s[sel.po], status: status === "Accepted" ? "Received" : "Partially received", received: status === "Accepted" ? 100 : 80, history: [{ when: "Just now", what: `${sel.no} ${status === "Accepted" ? "accepted after inspection" : "partly accepted, rejects returned"}` }, ...(s[sel.po]?.history ?? [])] } }));
 		setRows((r) => r.map((g) => (g.no === sel.no ? { ...g, status } : g)));
 		toast(`${sel.no} ${status.toLowerCase()} — stock ${status === "Rejected" ? "not posted, vendor informed" : "posted to bin A-04"}`);
 		setSelNo(null); setChecks({});
@@ -129,6 +132,15 @@ export function Reconciliation() {
 // ---------- MRP ----------
 export function Mrp() {
 	const [ran, setRan] = useState("08 Oct, 06:00");
+	const [prs, setPrs] = usePRs();
+	const [, setAp] = usePersist<{ id: string; type: string; title: string; by: string; value?: number; age: string; step: string }[]>("approvals", []);
+	const raise = (item: string, short: number) => {
+		const qty = Math.ceil((short * 1.5) / 100) * 100;
+		const no = `PR-${1900 + prs.length}`;
+		setPrs((l) => [{ no, item, qty, need: "15 Oct", by: "MRP run", reason: `Shortage of ${short} for next week's work orders`, source: "MRP", status: "Pending approval" }, ...l]);
+		setAp((l) => [{ id: no, type: "Purchase requisition", title: `${qty.toLocaleString("en-IN")} × ${item} (from MRP)`, by: "MRP run", age: "just now", step: "Plant head" }, ...l]);
+		toast(`${no} raised for ${qty.toLocaleString("en-IN")} × ${item} — sent for approval`);
+	};
 	return (
 		<>
 			<div className="row-btns spread">
@@ -141,7 +153,7 @@ export function Mrp() {
 				{ key: "onHand", label: "On hand", num: true, hideSm: true, render: (r) => r.onHand.toLocaleString("en-IN") },
 				{ key: "onOrder", label: "On order", num: true, hideSm: true, render: (r) => r.onOrder.toLocaleString("en-IN") },
 				{ key: "short", label: "Short", num: true, render: (r) => r.short ? <span className="neg">{r.short.toLocaleString("en-IN")}</span> : "—" },
-				{ key: "action", label: "Suggested action", render: (r) => r.short ? <button className="btn sm ghost" onClick={() => toast(`${r.action} — done`)}>{r.action}</button> : <Badge>Covered</Badge> },
+				{ key: "action", label: "Suggested action", render: (r) => r.short ? (prs.some((p) => p.item === r.item && p.source === "MRP" && p.status === "Pending approval") ? <Badge tone="info">Requisition raised</Badge> : <button className="btn sm ghost" onClick={() => raise(r.item, r.short)}>{r.action}</button>) : <Badge>Covered</Badge> },
 			]} rows={mrp} />
 		</>
 	);

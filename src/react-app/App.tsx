@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
-import { Dashboard, MaterialFlow, Procurement, Inventory } from "./pagesOps";
+import { Dashboard, MaterialFlow, Inventory } from "./pagesOps";
+import { Procurement } from "./procure";
 import { Production } from "./mfg";
 import { Batteries, Swap } from "./pagesAssets";
 import { Vehicles } from "./vehicles";

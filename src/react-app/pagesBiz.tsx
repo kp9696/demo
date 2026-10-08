@@ -4,6 +4,7 @@ import type { Approval } from "./data";
 import { BuPnl } from "./pagesExtra";
 import { usePersist } from "./store";
 import { useRfqs } from "./rfq";
+import { usePRs, usePoState } from "./procure";
 import { Page, Panel, Stat, Stats, Table, Chart, Bar, Tabs, toast } from "./ui";
 
 // ================= Finance =================
@@ -75,7 +76,9 @@ export function Approvals() {
 	const types = ["All", ...Array.from(new Set(approvals.map((a) => a.type)))];
 	const [t, setT] = useState("All");
 	const [, setRfqs] = useRfqs();
-	const act = (a: Approval, ok: boolean) => { setList((l) => l.filter((x) => x.id !== a.id)); if (a.type === "Vendor selection") setRfqs((rs) => rs.map((r) => (r.no === a.id ? { ...r, status: ok ? "Approved" : "Sent back" } : r))); toast(`${a.id} ${ok ? "approved" : "sent back"} — ${a.by} notified`); };
+	const [, setPrs] = usePRs();
+	const [, setPoSt] = usePoState();
+	const act = (a: Approval, ok: boolean) => { setList((l) => l.filter((x) => x.id !== a.id)); if (a.type === "Purchase requisition") setPrs((l) => l.map((p) => (p.no === a.id ? { ...p, status: ok ? "Approved" : "Rejected" } : p))); if (a.type === "Purchase order") setPoSt((s) => ({ ...s, [a.id]: { ...s[a.id], status: ok ? "Approved" : "Sent back", history: [{ when: "Just now", what: ok ? "Approved — emailed to vendor" : "Sent back by approver" }, ...(s[a.id]?.history ?? [])] } })); if (a.type === "Vendor selection") setRfqs((rs) => rs.map((r) => (r.no === a.id ? { ...r, status: ok ? "Approved" : "Sent back" } : r))); toast(`${a.id} ${ok ? "approved" : "sent back"} — ${a.by} notified`); };
 	const shown = list.filter((a) => t === "All" || a.type === t);
 	return (
 		<Page title="Approvals" sub="Everything waiting on you, from every workflow">

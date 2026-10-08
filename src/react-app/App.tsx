@@ -68,7 +68,7 @@ export default function App() {
 			<aside className="side">
 				<div className="brand">
 					<svg viewBox="0 0 32 32" width="28" height="28" aria-hidden="true"><rect x="2" y="8" width="24" height="16" rx="3" fill="none" stroke="currentColor" strokeWidth="2" /><rect x="26" y="13" width="4" height="6" rx="1" fill="currentColor" /><path d="M15 10l-5 7h5l-2 5 6-8h-5z" fill="var(--charge)" /></svg>
-					<div><b>Voltera ERP</b><small>Demo</small></div>
+					<div><b>Sample ERP</b><small>Demo</small></div>
 				</div>
 				<nav aria-label="Modules">
 					{nav.map((g) => (

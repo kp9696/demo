@@ -1,4 +1,4 @@
-# Voltera ERP — customer demo
+# Sample ERP — customer demo
 
 Clickable front-end prototype of an ERP for an electric two-wheeler maker with a battery-swap network.
 All data is sample data generated in `src/react-app/data.ts`; there is no backend yet.

@@ -28,7 +28,7 @@ export function Mobile() {
 					<div className="phone2">
 						<div className="ph2-status"><span>11:42</span><span>4G · 82%</span></div>
 						<div className="ph2-app" key={role}>
-							<div className="ph2-head"><b>{cur.label}</b><small>Voltera ERP</small></div>
+							<div className="ph2-head"><b>{cur.label}</b><small>Sample ERP</small></div>
 							{role === "stores" && <StoresApp />}
 							{role === "line" && <LineApp />}
 							{role === "tech" && <TechApp />}

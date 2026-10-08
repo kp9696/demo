@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { Dashboard, MaterialFlow, Procurement, Inventory, Production } from "./pagesOps";
 import { Batteries, Vehicles, Swap } from "./pagesAssets";
-import { Service, Finance, Approvals, Reports, Masters, Mobile } from "./pagesBiz";
+import { Service, Finance, Approvals, Reports, Masters } from "./pagesBiz";
+import { Mobile } from "./mobileApp";
 import { Toaster } from "./ui";
 import { go } from "./nav";
 
@@ -27,7 +28,7 @@ const icons = {
 };
 type Route = keyof typeof icons;
 const nav: { group: string; items: [Route, string, () => ReactNode, string?][] }[] = [
-	{ group: "Overview", items: [["dashboard", "Dashboard", Dashboard], ["approvals", "Approvals", Approvals, "7"]] },
+	{ group: "Overview", items: [["dashboard", "Dashboard", Dashboard], ["approvals", "Approvals", Approvals, "9"]] },
 	{ group: "Supply chain", items: [["procurement", "Procurement", Procurement], ["inventory", "Inventory", Inventory], ["flow", "Material flow & RFID", MaterialFlow]] },
 	{ group: "Make", items: [["production", "Manufacturing", Production], ["vehicles", "Vehicles", Vehicles]] },
 	{ group: "Energy", items: [["batteries", "Batteries", Batteries], ["swap", "Swap network", Swap]] },
@@ -57,7 +58,7 @@ export default function App() {
 			<aside className="side">
 				<div className="brand">
 					<svg viewBox="0 0 32 32" width="28" height="28" aria-hidden="true"><rect x="2" y="8" width="24" height="16" rx="3" fill="none" stroke="currentColor" strokeWidth="2" /><rect x="26" y="13" width="4" height="6" rx="1" fill="currentColor" /><path d="M15 10l-5 7h5l-2 5 6-8h-5z" fill="var(--charge)" /></svg>
-					<div><b>Voltera ERP</b><small>Zipp Mobility Pvt Ltd</small></div>
+					<div><b>Voltera ERP</b><small>IMARC Engineering</small></div>
 				</div>
 				<nav aria-label="Modules">
 					{nav.map((g) => (

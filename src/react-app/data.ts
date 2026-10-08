@@ -9,7 +9,7 @@ const pick = <T,>(arr: readonly T[]): T => arr[Math.floor(rnd() * arr.length)];
 const int = (a: number, b: number) => Math.floor(a + rnd() * (b - a + 1));
 
 export const cities = ["Bengaluru", "Pune", "Chennai", "Hyderabad", "Delhi NCR", "Ahmedabad"] as const;
-export const models = ["Zipp S1", "Zipp S1 Pro", "Cargo C2", "Zipp Lite"] as const;
+export const models = ["E-Ride S1", "E-Ride S1 Pro", "Cargo C2", "E-Ride Lite"] as const;
 export const colours = ["Graphite", "Pearl White", "Volt Green", "Ocean Blue", "Crimson"] as const;
 
 // ---------- Inventory ----------
@@ -116,14 +116,14 @@ export const stations = [
 	{ name: "End-of-line test", wip: 14, cycle: 5.1, target: 4.3, status: "Down 22 min" },
 ];
 export const workOrders = [
-	{ no: "WO-7731", model: "Zipp S1 Pro", qty: 120, done: 96, line: "Line 1", due: "08 Oct", status: "In progress" },
-	{ no: "WO-7732", model: "Zipp S1", qty: 150, done: 150, line: "Line 2", due: "08 Oct", status: "Completed" },
+	{ no: "WO-7731", model: "E-Ride S1 Pro", qty: 120, done: 96, line: "Line 1", due: "08 Oct", status: "In progress" },
+	{ no: "WO-7732", model: "E-Ride S1", qty: 150, done: 150, line: "Line 2", due: "08 Oct", status: "Completed" },
 	{ no: "WO-7733", model: "Cargo C2", qty: 60, done: 21, line: "Line 1", due: "09 Oct", status: "In progress" },
-	{ no: "WO-7734", model: "Zipp Lite", qty: 140, done: 0, line: "Line 2", due: "09 Oct", status: "Material short" },
-	{ no: "WO-7735", model: "Zipp S1", qty: 150, done: 0, line: "Line 2", due: "10 Oct", status: "Released" },
+	{ no: "WO-7734", model: "E-Ride Lite", qty: 140, done: 0, line: "Line 2", due: "09 Oct", status: "Material short" },
+	{ no: "WO-7735", model: "E-Ride S1", qty: 150, done: 0, line: "Line 2", due: "10 Oct", status: "Released" },
 ];
 export const bom = [
-	{ level: 1, part: "Zipp S1 Pro — complete vehicle", qty: 1 },
+	{ level: 1, part: "E-Ride S1 Pro — complete vehicle", qty: 1 },
 	{ level: 2, part: "Main frame — S1", qty: 1 },
 	{ level: 2, part: "Drivetrain assembly", qty: 1 },
 	{ level: 3, part: "Hub motor 2.5 kW", qty: 1 },
@@ -289,6 +289,8 @@ export const approvals: Approval[] = [
 	{ id: "SA-0412", type: "Stock adjustment", title: "Write-off 46 × Tail lamp LED unit (damaged)", by: "Stores — Hosur", value: 28520, age: "1 d", step: "Finance" },
 	{ id: "DSP-2291", type: "Vehicle dispatch", title: "36 vehicles → Capital EV Hub", by: "Logistics", age: "3 h", step: "Sales head" },
 	{ id: "BA-1170", type: "Battery allocation", title: "120 packs → HSR & Kharadi stations", by: "Swap ops", age: "40 m", step: "Network manager" },
+	{ id: "MR-0215", type: "Material return", title: "Return 18 × Motor controller 48V from Line 1 to stores (unused)", by: "Line 1 supervisor", value: 122400, age: "1 h", step: "Stores head" },
+	{ id: "SV-1043", type: "Service approval", title: "Out-of-warranty motor repair — JC-31203, estimate ₹9,800", by: "Sahyadri EV World", value: 9800, age: "3 h", step: "Customer + service manager" },
 	{ id: "UA-0087", type: "User access", title: "Dealer portal access — Marina E-Mobility (2 users)", by: "IT", age: "2 d", step: "Admin" },
 ];
 
@@ -322,6 +324,78 @@ export const rfidHardware = [
 	{ type: "On-metal UHF tag", where: "Motors, frames, battery packs", qty: 25000, range: "up to 5 m", ip: "IP68", proto: "EPC Gen2 / ISO 18000-63" },
 	{ type: "Passive label tag", where: "Cartons, bins, boxed spares", qty: 60000, range: "up to 8 m", ip: "—", proto: "EPC Gen2" },
 	{ type: "BLE beacon tag", where: "High-value pallets, tools", qty: 150, range: "up to 50 m", ip: "IP67", proto: "Bluetooth Low Energy 5.0" },
+];
+
+// ---------- Goods receipt & inspection ----------
+export const grns = [
+	{ no: "GRN-88140", po: "PO-26-4124", vendor: "Voltcell Energy Pvt Ltd", item: "LFP cell 3.2V 50Ah", qty: 6000, tags: "412 / 412", gate: "Gate G1", time: "08 Oct 10:52", status: "Awaiting inspection" },
+	{ no: "GRN-88139", po: "PO-26-4127", vendor: "Rapid Tyres Ltd", item: "Tyre 90/90-12 tubeless", qty: 800, tags: "100 / 100", gate: "Gate G1", time: "08 Oct 09:30", status: "Awaiting inspection" },
+	{ no: "GRN-88137", po: "PO-26-4121", vendor: "Shakti Motors & Drives", item: "Hub motor 2.5 kW", qty: 300, tags: "300 / 300", gate: "Gate G1", time: "07 Oct 16:05", status: "Accepted" },
+	{ no: "GRN-88135", po: "PO-26-4130", vendor: "Lumio Auto Electricals", item: "Headlamp LED unit", qty: 500, tags: "498 / 500", gate: "Gate G1", time: "07 Oct 11:40", status: "Short received" },
+	{ no: "GRN-88131", po: "PO-26-4119", vendor: "Precision Frames India", item: "Main frame — S1", qty: 240, tags: "240 / 240", gate: "Gate G2", time: "06 Oct 15:30", status: "Partly rejected" },
+];
+export const inspectionPlan = [
+	{ check: "Cell voltage within 3.25–3.35 V", sample: "50 cells", result: "" },
+	{ check: "Internal resistance below 0.6 mΩ", sample: "50 cells", result: "" },
+	{ check: "Batch certificate matches PO", sample: "Document", result: "" },
+	{ check: "No dents or swelling", sample: "Visual, 100%", result: "" },
+];
+
+// ---------- Stock transfers, counts, reconciliation ----------
+export const transfers = [
+	{ no: "TR-0931", from: "Central WH — Hosur", to: "Pune site WH", items: "Brake pad set × 400, Tyre × 120", status: "In transit", eta: "09 Oct" },
+	{ no: "TR-0930", from: "Central WH — Hosur", to: "Plant line-side", items: "Hub motor × 60, Controller × 60", status: "Delivered", eta: "08 Oct" },
+	{ no: "TR-0929", from: "Pune site WH", to: "Chennai service WH", items: "Charger 48V × 25", status: "Pending approval", eta: "11 Oct" },
+	{ no: "TR-0927", from: "Central WH — Hosur", to: "Pune site WH", items: "M8 flange bolt × 60 boxes", status: "Delivered", eta: "03 Oct" },
+];
+export const counts = [
+	{ no: "PC-0412", area: "Bins A-01 to A-12", method: "RFID handheld", items: 186, counted: 186, variance: 0, status: "Completed", date: "07 Oct" },
+	{ no: "PC-0413", area: "Bins B-01 to B-08", method: "RFID handheld", items: 142, counted: 140, variance: -2, status: "Recount needed", date: "08 Oct" },
+	{ no: "PC-0414", area: "Battery bay", method: "Fixed reader sweep", items: 318, counted: 318, variance: 0, status: "Completed", date: "08 Oct" },
+	{ no: "PC-0415", area: "Bins C-01 to C-10", method: "Barcode scan", items: 210, counted: 0, variance: 0, status: "Scheduled", date: "09 Oct" },
+];
+export const recon = [
+	{ item: "Tail lamp LED unit", system: 512, physical: 466, diff: -46, value: -28520, reason: "Damaged in storage", status: "Write-off pending" },
+	{ item: "Wiring harness main", system: 880, physical: 878, diff: -2, value: -3500, reason: "Issued without scan", status: "Investigating" },
+	{ item: "M8 flange bolt", system: 1250, physical: 1262, diff: 12, value: 4560, reason: "Return not booked", status: "Adjusted" },
+	{ item: "Brake pad set", system: 640, physical: 640, diff: 0, value: 0, reason: "—", status: "Matched" },
+];
+
+// ---------- MRP & finished goods ----------
+export const mrp = [
+	{ item: "BMS board v4", need: 1080, onHand: 236, onOrder: 800, short: 44, action: "Expedite PO-26-4131", by: "12 Oct" },
+	{ item: "LFP cell 3.2V 50Ah", need: 16200, onHand: 9400, onOrder: 6000, short: 800, action: "Raise PR for 12,000", by: "14 Oct" },
+	{ item: "TFT cluster 5in", need: 540, onHand: 210, onOrder: 600, short: 0, action: "Covered", by: "—" },
+	{ item: "Hub motor 2.5 kW", need: 540, onHand: 610, onOrder: 300, short: 0, action: "Covered", by: "—" },
+	{ item: "Alloy wheel 12in", need: 1080, onHand: 720, onOrder: 0, short: 360, action: "Raise PR for 600", by: "15 Oct" },
+	{ item: "Seat assembly", need: 540, onHand: 590, onOrder: 0, short: 0, action: "Covered", by: "—" },
+];
+export const fgYard = [
+	{ model: "E-Ride S1", colour: "Graphite", qty: 64, allocated: 40, dealer: "Capital EV Hub", age: "2 d" },
+	{ model: "E-Ride S1", colour: "Pearl White", qty: 38, allocated: 20, dealer: "Greenline Motors", age: "1 d" },
+	{ model: "E-Ride S1 Pro", colour: "Volt Green", qty: 52, allocated: 36, dealer: "Capital EV Hub", age: "1 d" },
+	{ model: "Cargo C2", colour: "Graphite", qty: 21, allocated: 0, dealer: "—", age: "9 d" },
+	{ model: "E-Ride Lite", colour: "Ocean Blue", qty: 39, allocated: 30, dealer: "Sahyadri EV World", age: "3 d" },
+];
+
+// ---------- Service appointments & damage ----------
+export const appointments = [
+	{ time: "09:30", customer: "Arjun Rao", vehicle: "KA-01-EV-4471", type: "Periodic service — 6000 km", dealer: "Greenline Motors", tech: "Suresh K", status: "Checked in" },
+	{ time: "10:30", customer: "Sneha Patil", vehicle: "MH-12-EV-2210", type: "Battery check", dealer: "Sahyadri EV World", tech: "Amit P", status: "Checked in" },
+	{ time: "12:00", customer: "Rahul Gupta", vehicle: "DL-3S-EV-9031", type: "Accident repair estimate", dealer: "Capital EV Hub", tech: "Deepak R", status: "Booked" },
+	{ time: "14:00", customer: "Divya Menon", vehicle: "TN-09-EV-5512", type: "Brake noise", dealer: "Marina E-Mobility", tech: "Lokesh M", status: "Booked" },
+	{ time: "15:30", customer: "Aditya Shetty", vehicle: "TS-07-EV-1874", type: "First service — 1000 km", dealer: "Deccan Electric Wheels", tech: "Farhan S", status: "Booked" },
+];
+export const damage = [
+	{ when: "14 Sep 2026", what: "Minor accident — front panel", where: "Capital EV Hub", detail: "Insurance claim IC-2291 · ₹6,400 · panel and headlamp replaced" },
+	{ when: "02 Jun 2026", what: "Rear tyre puncture damage", where: "Roadside assist", detail: "Tyre replaced, no warranty" },
+];
+
+// ---------- Business-unit P&L (₹ crore, H1) ----------
+export const buPnl = [
+	{ bu: "Vehicle manufacturing & sales", revenue: 131.4, cogs: 112.6, opex: 14.9 },
+	{ bu: "Swap network", revenue: 16.3, cogs: 6.1, opex: 5.2 },
+	{ bu: "Service & spare parts", revenue: 11.1, cogs: 3.9, opex: 3.3 },
 ];
 
 // ---------- helpers ----------

@@ -59,6 +59,9 @@ const toneFor: Record<string, string> = {
 	"Pending approval": "warn", Pending: "warn", "Partially received": "warn", "Awaiting parts": "warn", "Warranty approval": "warn", Slow: "warn",
 	"Under review": "warn", Draft: "muted", "In service": "warn", Service: "warn", Low: "warn",
 	// problems
+	"Awaiting inspection": "warn", Accepted: "good", "Short received": "warn", "Partly rejected": "bad", Rejected: "bad",
+	"Recount needed": "warn", Scheduled: "info", "Write-off pending": "warn", Investigating: "warn", Adjusted: "good", Matched: "good",
+	"Sent for approval": "info", "Checked in": "info", Booked: "info", Covered: "good",
 	"Material short": "bad", "End of life": "bad", Reorder: "bad", "Below min": "bad",
 };
 export function Badge({ children, tone }: { children: string; tone?: string }) {

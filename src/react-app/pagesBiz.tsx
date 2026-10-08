@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { jobCards, warrantyClaims, complaints, dealers, pnl, pnlMonths, costCentres, approvals, items, vendors, swapStations, warehouses, inr, crore, sum } from "./data";
 import type { Approval } from "./data";
-import { Page, Panel, Stat, Stats, Badge, Table, Chart, Bar, Tabs, Facts, Cell, toast } from "./ui";
+import { Appointments, BuPnl } from "./pagesExtra";
+import { Page, Panel, Stat, Stats, Badge, Table, Chart, Bar, Tabs, Facts, toast } from "./ui";
 
 // ================= Dealer & service =================
 export function Service() {
-	const [tab, setTab] = useState<"Job cards" | "Warranty claims" | "Dealers" | "Complaints">("Job cards");
+	const [tab, setTab] = useState<"Job cards" | "Appointments" | "Warranty claims" | "Dealers" | "Complaints">("Job cards");
 	return (
 		<Page title="Dealers & service" sub="Job cards, warranty and dealer performance across 5 dealers"
 			actions={<button className="btn" onClick={() => toast("Job card JC-31205 opened for VIN …052150")}>New job card</button>}>
@@ -15,7 +16,7 @@ export function Service() {
 				<Stat label="Average turnaround" value="7.1 h" delta="Target 6 h" tone="warn" />
 				<Stat label="Service revenue (Sep)" value={crore(pnl.serviceRevenue[5] + pnl.sparesRevenue[5])} delta="Labour + spares" />
 			</Stats>
-			<Panel right={<Tabs tabs={["Job cards", "Warranty claims", "Dealers", "Complaints"] as const} value={tab} onChange={setTab} />}>
+			<Panel right={<Tabs tabs={["Job cards", "Appointments", "Warranty claims", "Dealers", "Complaints"] as const} value={tab} onChange={setTab} />}>
 				{tab === "Job cards" && (
 					<div className="kanban">
 						{["Diagnosis", "Awaiting parts", "Warranty approval", "In repair", "Ready for delivery", "Closed"].map((col) => (
@@ -33,6 +34,7 @@ export function Service() {
 						))}
 					</div>
 				)}
+				{tab === "Appointments" && <Appointments />}
 				{tab === "Warranty claims" && (
 					<Table cols={[
 						{ key: "no", label: "Claim" }, { key: "part", label: "Part" }, { key: "dealer", label: "Dealer", hideSm: true },
@@ -109,6 +111,9 @@ export function Finance() {
 					</ul>
 				</Panel>
 			</div>
+			<Panel title="Profit by business unit" note="H1 FY 2026–27, ₹ crore">
+				<BuPnl />
+			</Panel>
 			<Panel title="Profit & loss statement">
 				<div className="table-wrap">
 					<table className="pnl">
@@ -231,52 +236,6 @@ export function Masters() {
 					{ n: "Anita Rao", r: "Finance controller", s: "Finance, approvals up to ₹50 L" },
 					{ n: "Greenline Motors", r: "Dealer", s: "Dealer portal · own vehicles & jobs" },
 				]} />}
-			</Panel>
-		</Page>
-	);
-}
-
-// ================= Mobile app preview =================
-export function Mobile() {
-	return (
-		<Page title="Mobile app" sub="For stores, line, service technicians, dealers and managers — Android and iOS">
-			<div className="phones">
-				<figure>
-					<div className="phone">
-						<div className="ph-bar">Stores · Scan</div>
-						<div className="ph-scan"><span>Point at RFID tag or barcode</span></div>
-						<div className="ph-card"><b>Hub motor 2.5 kW</b><small>SN HM25-88310 · bin A-04-2</small></div>
-						<div className="ph-row"><button className="btn sm">Receive</button><button className="btn sm ghost">Issue</button><button className="btn sm ghost">Move</button></div>
-					</div>
-					<figcaption>Stores scan goods in, out and between bins</figcaption>
-				</figure>
-				<figure>
-					<div className="phone">
-						<div className="ph-bar">Job card JC-31204</div>
-						<div className="ph-card"><b>Range dropped to 55 km</b><small>Priya Nair · VIN …052118</small></div>
-						<div className="ph-card"><small>Battery BAT-48-20462</small><Cell pct={86} label="86% health" /></div>
-						<div className="ph-list"><span>✓ BMS log pulled</span><span>✓ Cell balance checked</span><span>○ Road test</span></div>
-						<div className="ph-row"><button className="btn sm">Request part</button></div>
-					</div>
-					<figcaption>Technicians diagnose with live battery data</figcaption>
-				</figure>
-				<figure>
-					<div className="phone">
-						<div className="ph-bar">Today</div>
-						<div className="ph-kpi"><span>Built<b>219</b></span><span>Swaps<b>1,693</b></span><span>Approvals<b>7</b></span></div>
-						<div className="ph-card"><b>PO-26-4131 · ₹22.9 L</b><small>NexBoard — BMS board v4 × 800</small><div className="ph-row"><button className="btn sm ghost">Send back</button><button className="btn sm">Approve</button></div></div>
-					</div>
-					<figcaption>Managers approve and see the day at a glance</figcaption>
-				</figure>
-			</div>
-			<Panel title="What each role can do">
-				<Table dense cols={[{ key: "r", label: "Role" }, { key: "d", label: "On the app" }]} rows={[
-					{ r: "Warehouse", d: "RFID / barcode scan, goods receipt, put-away, issue, transfer, cycle count" },
-					{ r: "Plant & production", d: "Work order progress, line-side requests, quality checks, battery pairing" },
-					{ r: "Service technicians", d: "Job cards, diagnosis checklist, parts request, photos, customer sign-off" },
-					{ r: "Dealers", d: "Stock, bookings, service appointments, warranty claims" },
-					{ r: "Management", d: "Dashboard, exceptions, approvals with one tap" },
-				]} />
 			</Panel>
 		</Page>
 	);

@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { batteries, batteryHistory, vehicles, swapStations, swapDaily, swapTransactions, cities, inr, lakh, sum } from "./data";
+import { damage, batteries, batteryHistory, vehicles, swapStations, swapDaily, swapTransactions, cities, inr, lakh, sum } from "./data";
 import type { Battery, Vehicle } from "./data";
 import { Page, Panel, Stat, Stats, Badge, Table, Chart, HBars, Cell, Tabs, Drawer, Facts, Timeline, Search, toast } from "./ui";
 
@@ -105,10 +105,10 @@ export function Vehicles() {
 	);
 }
 function VehicleRecord({ v }: { v: Vehicle }) {
-	const [tab, setTab] = useState<"Overview" | "Components" | "History">("Overview");
+	const [tab, setTab] = useState<"Overview" | "Components" | "History" | "Damage & repairs">("Overview");
 	return (
 		<>
-			<Tabs tabs={["Overview", "Components", "History"] as const} value={tab} onChange={setTab} />
+			<Tabs tabs={["Overview", "Components", "History", "Damage & repairs"] as const} value={tab} onChange={setTab} />
 			{tab === "Overview" && (
 				<Facts rows={[
 					["Stage", <Badge>{v.status}</Badge>], ["Colour", v.colour], ["Manufactured", `${v.mfg}, Hosur Line 1`], ["Battery fitted", v.battery],
@@ -127,6 +127,7 @@ function VehicleRecord({ v }: { v: Vehicle }) {
 					{ p: "Battery pack", s: v.battery, v: "Voltcell Energy" },
 				]} />
 			)}
+			{tab === "Damage & repairs" && (v.odo > 0 ? <Timeline items={damage} /> : <p className="empty">No accident or damage records. Records appear here when a dealer logs one on a job card.</p>)}
 			{tab === "History" && (
 				<Timeline items={[
 					...(v.status === "In service" ? [{ when: "08 Oct", what: "In for service", where: "Dealer workshop", detail: "JC-31204 · range complaint" }] : []),

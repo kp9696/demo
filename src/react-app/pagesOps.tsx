@@ -7,6 +7,7 @@ import {
 import type { Item, PO } from "./data";
 import { Page, Panel, Stat, Stats, Badge, Table, Chart, HBars, Bar, Cell, Tabs, Drawer, Facts, Timeline, Search, toast } from "./ui";
 import { go } from "./nav";
+import { GoodsReceipt, Transfers, PhysicalCount, Reconciliation, Mrp, FinishedGoods } from "./pagesExtra";
 
 // ================= Dashboard =================
 export function Dashboard() {
@@ -116,7 +117,7 @@ export function Dashboard() {
 						<li onClick={() => go("inventory")}><Badge tone="bad">Stock</Badge>BMS board v4 below minimum; WO-7734 blocked</li>
 						<li onClick={() => go("swap")}><Badge tone="warn">Swap</Badge>Kharadi has 2 charged packs left — 13 still charging</li>
 						<li onClick={() => go("procurement")}><Badge tone="warn">Vendor</Badge>Rapid Tyres on-time delivery fell to 82%</li>
-						<li onClick={() => go("approvals")}><Badge tone="info">Approve</Badge>7 approvals waiting, ₹1.98 Cr in value</li>
+						<li onClick={() => go("approvals")}><Badge tone="info">Approve</Badge>9 approvals waiting, ₹1.99 Cr in value</li>
 					</ul>
 				</Panel>
 				<Panel title="Vehicles by stage" note="Where every vehicle is in its lifecycle" right={<button className="btn ghost sm" onClick={() => go("vehicles")}>Open vehicles</button>}>
@@ -229,7 +230,7 @@ export function MaterialFlow() {
 
 // ================= Procurement =================
 export function Procurement() {
-	const [tab, setTab] = useState<"Purchase orders" | "Requisitions" | "Quotation comparison" | "Vendors">("Purchase orders");
+	const [tab, setTab] = useState<"Purchase orders" | "Goods receipt & inspection" | "Requisitions" | "Quotation comparison" | "Vendors">("Purchase orders");
 	const [po, setPo] = useState<PO | null>(null);
 	const open = purchaseOrders.filter((p) => p.status !== "Inspected" && p.status !== "Received");
 	return (
@@ -241,7 +242,7 @@ export function Procurement() {
 				<Stat label="Vendor on-time delivery" value="90.2%" delta="Target 95%" tone="warn" />
 				<Stat label="Spend this month" value={crore(sum(vendors.map((v) => v.spend)))} delta="12% under budget" tone="good" />
 			</Stats>
-			<Panel right={<Tabs tabs={["Purchase orders", "Requisitions", "Quotation comparison", "Vendors"] as const} value={tab} onChange={setTab} />}>
+			<Panel right={<Tabs tabs={["Purchase orders", "Goods receipt & inspection", "Requisitions", "Quotation comparison", "Vendors"] as const} value={tab} onChange={setTab} />}>
 				{tab === "Purchase orders" && (
 					<Table cols={[
 						{ key: "no", label: "PO" },
@@ -253,6 +254,7 @@ export function Procurement() {
 						{ key: "status", label: "Status", render: (r: PO) => <Badge>{r.status}</Badge> },
 					]} rows={purchaseOrders} onRow={setPo} />
 				)}
+				{tab === "Goods receipt & inspection" && <GoodsReceipt />}
 				{tab === "Requisitions" && (
 					<Table cols={[
 						{ key: "no", label: "Requisition" }, { key: "item", label: "Item" },
@@ -310,6 +312,7 @@ export function Inventory() {
 	const [wh, setWh] = useState("All locations");
 	const [q, setQ] = useState("");
 	const [sel, setSel] = useState<Item | null>(null);
+	const [tab, setTab] = useState<"Stock" | "Transfers" | "Physical count" | "Reconciliation">("Stock");
 	const rows = useMemo(() => items.filter((i) => (wh === "All locations" || i.warehouse === wh) && (i.name + i.code).toLowerCase().includes(q.toLowerCase())), [wh, q]);
 	const value = sum(items.map((i) => i.onHand * i.unitCost));
 	return (
@@ -321,7 +324,11 @@ export function Inventory() {
 				<Stat label="Slow or non-moving" value={lakh(sum(items.filter((i) => i.ageDays > 120).map((i) => i.onHand * i.unitCost)))} delta="Over 120 days" tone="warn" />
 				<Stat label="Stock accuracy" value="98.7%" delta="RFID cycle counts" tone="good" />
 			</Stats>
-			<Panel right={
+			<div className="page-tabs"><Tabs tabs={["Stock", "Transfers", "Physical count", "Reconciliation"] as const} value={tab} onChange={setTab} /></div>
+			{tab === "Transfers" && <Panel title="Stock transfers" note="Moves between warehouses, line-side and site stores"><Transfers /></Panel>}
+			{tab === "Physical count" && <Panel title="Physical stock verification" note="Cycle counts by RFID handheld, fixed reader or barcode"><PhysicalCount /></Panel>}
+			{tab === "Reconciliation" && <Panel title="Inventory reconciliation" note="System stock against counted stock, with reasons and adjustments"><Reconciliation /></Panel>}
+			{tab === "Stock" && <Panel right={
 				<div className="filters">
 					<Search value={q} onChange={setQ} placeholder="Search item or code" />
 					<select value={wh} onChange={(e) => setWh(e.target.value)} aria-label="Location">
@@ -341,7 +348,7 @@ export function Inventory() {
 					{ key: "st", label: "Status", render: (r: Item) => { const s = stockState(r); return s === "OK" ? <span className="sub">OK</span> : <Badge tone={s === "Below min" || s === "Reorder" ? "bad" : "warn"}>{s}</Badge>; } },
 				]} rows={rows} onRow={setSel} />
 				{rows.length === 0 && <p className="empty">No items match “{q}”. Clear the search to see all stock.</p>}
-			</Panel>
+			</Panel>}
 			<Drawer open={!!sel} onClose={() => setSel(null)} title={sel?.name ?? ""} sub={sel ? `${sel.code} · ${sel.category}` : ""}>
 				{sel && (
 					<>
@@ -366,7 +373,7 @@ export function Inventory() {
 
 // ================= Production =================
 export function Production() {
-	const [tab, setTab] = useState<"Work orders" | "Bill of materials" | "Quality">("Work orders");
+	const [tab, setTab] = useState<"Work orders" | "MRP" | "Bill of materials" | "Quality" | "Finished goods">("Work orders");
 	const plan = sum(productionWeek.map((d) => d.plan));
 	const act = sum(productionWeek.map((d) => d.actual));
 	return (
@@ -398,7 +405,7 @@ export function Production() {
 					</ul>
 				</Panel>
 			</div>
-			<Panel right={<Tabs tabs={["Work orders", "Bill of materials", "Quality"] as const} value={tab} onChange={setTab} />}>
+			<Panel right={<Tabs tabs={["Work orders", "MRP", "Bill of materials", "Quality", "Finished goods"] as const} value={tab} onChange={setTab} />}>
 				{tab === "Work orders" && (
 					<Table cols={[
 						{ key: "no", label: "Work order" }, { key: "model", label: "Model" }, { key: "line", label: "Line", hideSm: true },
@@ -406,9 +413,11 @@ export function Production() {
 						{ key: "due", label: "Due", hideSm: true }, { key: "status", label: "Status", render: (r) => <Badge>{r.status}</Badge> },
 					]} rows={workOrders} />
 				)}
+				{tab === "MRP" && <Mrp />}
+				{tab === "Finished goods" && <FinishedGoods />}
 				{tab === "Bill of materials" && (
 					<Table dense cols={[
-						{ key: "part", label: "Zipp S1 Pro · BOM rev C", render: (r) => <span style={{ paddingLeft: (r.level - 1) * 20 }} className={r.level === 1 ? "strong" : r.level === 3 ? "sub" : ""}>{r.part}</span> },
+						{ key: "part", label: "E-Ride S1 Pro · BOM rev C", render: (r) => <span style={{ paddingLeft: (r.level - 1) * 20 }} className={r.level === 1 ? "strong" : r.level === 3 ? "sub" : ""}>{r.part}</span> },
 						{ key: "qty", label: "Qty", num: true },
 					]} rows={bom} />
 				)}

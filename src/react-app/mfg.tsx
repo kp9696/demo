@@ -19,10 +19,6 @@ export const kit: [string, number][] = [
 ];
 const itemByName = (n: string) => items.find((i) => i.name === n);
 
-const baseIssued = (wo: string, part: string) => (wo === "WO-7731" ? 100 : wo === "WO-7733" ? 30 : 0) * (kit.find((k) => k[0] === part)?.[1] ?? 1);
-/** Parts issued during this demo, so store stock can go down and line-side stock up. */
-const demoIssued = (issued: Record<string, Record<string, number>>, part: string, woFilter?: (wo: string) => boolean) =>
-	Object.entries(issued).filter(([wo]) => !woFilter || woFilter(wo)).reduce((a, [wo, m]) => a + Math.max(0, (m[part] ?? 0) - baseIssued(wo, part)), 0);
 export function useWOs() { return usePersist<WO[]>("workorders", workOrders); }
 export function useIssued() { return usePersist<Record<string, Record<string, number>>>("issued", { "WO-7731": Object.fromEntries(kit.map(([p, q]) => [p, 100 * q])), "WO-7733": Object.fromEntries(kit.map(([p, q]) => [p, 30 * q])) }); }
 
@@ -275,51 +271,62 @@ function MaterialIssue() {
 	);
 }
 
-// ---------- 4. Line-side stock ----------
-const lsBase: Record<string, [number, number]> = { // [qty on line, used per hour] for Line 1
-	"Hub motor 2.5 kW": [44, 16], "Motor controller 48V": [12, 16], "Main frame — S1": [38, 16], "Front fork assembly": [30, 16], "Rear shock absorber": [52, 16],
-	"Wiring harness main": [26, 16], "TFT cluster 5in": [9, 16], "Alloy wheel 12in": [70, 32], "Tyre 90/90-12 tubeless": [64, 32], "Disc brake kit 220mm": [41, 16], "Seat assembly": [35, 16], "Headlamp LED unit": [58, 16],
-};
+// ---------- 4. Line-side stock (read from the stock ledger) ----------
+/** Parts used per hour on each line. */
+const useRate: Record<string, number> = { "Line 1": 16, "Line 2": 18 };
+type Refill = { no: string; part: string; qty: number; line: string; status: string };
 function LineSide() {
-	const [line, setLine] = useState<string>("Line 1");
-	const [issued] = useIssued();
-	const [wos] = useWOs();
-	const [reqs, setReqs] = usePersist<{ no: string; part: string; qty: number; line: string; status: string }[]>("refills", []);
-	const extra = (p: string) => demoIssued(issued, p, (no) => wos.some((w) => w.no === no && w.line === line));
-	const rows = kit.map(([p]) => {
-		const [q0, rate0] = lsBase[p];
-		const qty = Math.round(q0 * (line === "Line 2" ? 1.2 : 1)) + extra(p);
-		const rate = Math.round(rate0 * (line === "Line 2" ? 1.15 : 1));
-		const hours = qty / rate;
-		const pending = reqs.some((r) => r.part === p && r.line === line && r.status === "Requested");
-		return { p, qty, rate, hours, pending, min: rate * 2 };
+	const [view, setView] = useState<string>("Both lines");
+	const { qty, post } = useStock();
+	const [reqs, setReqs] = usePersist<Refill[]>("refills", []);
+	const usedBy = view === "Both lines" ? [...lines] : [view];
+	const rows = kit.map(([p, per]) => {
+		const it = itemByName(p)!;
+		const onLine = Math.max(0, qty(it.code, LINE));
+		const rate = usedBy.reduce((a, l) => a + useRate[l] * per, 0);
+		const hours = rate ? onLine / rate : 99;
+		const pending = reqs.some((r) => r.part === p && r.status === "Requested");
+		return { p, code: it.code, onLine, store: Math.max(0, qty(it.code, CENTRAL)), rate, hours, pending };
 	});
-	const request = (p: string, qty: number) => {
-		const no = `MR-${3100 + reqs.length}`;
-		setReqs((l) => [{ no, part: p, qty, line, status: "Requested" }, ...l]);
-		toast(`${no}: ${qty} × ${p} requested from stores for ${line}`);
+	const request = (list: { p: string; q: number }[]) => {
+		const forLine = view === "Both lines" ? "Plant line-side" : view;
+		const made = list.map(({ p, q }, k) => ({ no: `MR-${3100 + reqs.length + k}`, part: p, qty: q, line: forLine, status: "Requested" }));
+		setReqs((l) => [...made, ...l]);
+		toast(made.length === 1 ? `${made[0].no}: ${made[0].qty} × ${made[0].part} requested from Central WH` : `${made.length} refill requests sent to Central WH (${made[0].no}–${made[made.length - 1].no})`);
+	};
+	const refillQty = (rate: number) => Math.ceil((rate * 4) / 10) * 10;
+	const deliver = (r: Refill) => {
+		const it = itemByName(r.part)!;
+		if (qty(it.code, CENTRAL) < r.qty) { toast(`Only ${Math.max(0, qty(it.code, CENTRAL))} × ${r.part} in Central WH — refill can't be delivered yet`); return; }
+		post([
+			{ type: "Issue to line", code: it.code, loc: CENTRAL, qty: -r.qty, ref: r.no, by: "Stores — Hosur", note: `Refill for ${r.line}` },
+			{ type: "Line receipt", code: it.code, loc: LINE, qty: r.qty, ref: r.no, by: r.line, note: "Line-side refill" },
+		]);
+		setReqs((l) => l.map((x) => (x.no === r.no ? { ...x, status: "Delivered" } : x)));
+		toast(`${r.no} delivered — ${r.qty} × ${r.part} moved from Central WH to line-side`);
 	};
 	const low = rows.filter((r) => r.hours < 2 && !r.pending);
 	return (
 		<>
 			<div className="row-btns spread">
-				<Tabs tabs={lines} value={line as (typeof lines)[number]} onChange={setLine} />
-				<button className="btn ghost" disabled={!low.length} onClick={() => low.forEach((r) => request(r.p, r.rate * 4))}>Refill all low parts ({low.length})</button>
+				<Tabs tabs={["Both lines", ...lines]} value={view} onChange={setView} />
+				<button className="btn ghost" disabled={!low.length} onClick={() => request(low.map((r) => ({ p: r.p, q: refillQty(r.rate) })))}>Refill all low parts ({low.length})</button>
 			</div>
-			<p className="hint">Stock sitting at the line, how fast it is used, and how long it lasts. Below 2 hours is low.</p>
+			<p className="hint">Live from the stock ledger (Plant line-side). Material issues and refills add stock here; usage per hour shows how long it lasts. Below 2 hours is low.</p>
 			<Table dense cols={[
 				{ key: "p", label: "Part" },
-				{ key: "qty", label: "On line", num: true },
+				{ key: "onLine", label: "On line", num: true, render: (r) => r.onLine.toLocaleString("en-IN") },
+				{ key: "store", label: "In Central WH", num: true, hideSm: true, render: (r) => r.store.toLocaleString("en-IN") },
 				{ key: "rate", label: "Used / hour", num: true, hideSm: true },
 				{ key: "h", label: "Lasts", render: (r) => <span className="inline-bar"><Bar pct={Math.min(100, (r.hours / 6) * 100)} tone={r.hours < 2 ? "bad" : r.hours < 3 ? "warn" : "accent"} />{r.hours.toFixed(1)} h</span> },
-				{ key: "s", label: "", render: (r) => r.pending ? <Badge tone="info">Refill requested</Badge> : r.hours < 2 ? <button className="btn sm" onClick={() => request(r.p, r.rate * 4)}>Request refill</button> : <span className="sub">OK</span> },
+				{ key: "s", label: "", render: (r) => r.pending ? <Badge tone="info">Refill requested</Badge> : r.hours < 2 ? <button className="btn sm" onClick={() => request([{ p: r.p, q: refillQty(r.rate) }])}>Request refill</button> : <span className="sub">OK</span> },
 			]} rows={rows} />
 			{reqs.length > 0 && (
 				<>
 					<h3 className="mini" style={{ marginTop: 18 }}>Refill requests</h3>
-					<Table dense cols={[{ key: "no", label: "Request" }, { key: "part", label: "Part" }, { key: "qty", label: "Qty", num: true }, { key: "line", label: "Line" },
-						{ key: "status", label: "Status", render: (r) => <Badge>{r.status}</Badge> },
-						{ key: "a", label: "", render: (r) => r.status === "Requested" ? <button className="btn sm ghost" onClick={() => setReqs((l) => l.map((x) => (x.no === r.no ? { ...x, status: "Delivered" } : x)))}>Mark delivered</button> : null }]} rows={reqs} />
+					<Table dense cols={[{ key: "no", label: "Request" }, { key: "part", label: "Part" }, { key: "qty", label: "Qty", num: true }, { key: "line", label: "For", hideSm: true },
+						{ key: "status", label: "Status", render: (r: Refill) => <Badge>{r.status}</Badge> },
+						{ key: "a", label: "", render: (r: Refill) => r.status === "Requested" ? <button className="btn sm ghost" onClick={() => deliver(r)}>Deliver from stores</button> : null }]} rows={reqs} />
 				</>
 			)}
 		</>

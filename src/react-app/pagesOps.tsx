@@ -2,14 +2,14 @@ import { useEffect, useMemo, useState } from "react";
 import { useOpenParam } from "./store";
 import { QuotationComparison, useExtraPOs } from "./rfq";
 import {
-	items, purchaseOrders, requisitions, vendors, productionWeek, stations, workOrders, bom, quality,
+	items, purchaseOrders, requisitions, vendors, productionWeek, stations,
 	batteries, swapStations, swapDaily, jobCards, pnl, pnlMonths, flowStages, rfidEvents, rfidHardware,
 	inr, lakh, crore, sum, warehouses,
 } from "./data";
 import type { Item, PO } from "./data";
 import { Page, Panel, Stat, Stats, Badge, Table, Chart, HBars, Bar, Cell, Tabs, Drawer, Facts, Timeline, Search, toast } from "./ui";
 import { go } from "./nav";
-import { GoodsReceipt, Transfers, PhysicalCount, Reconciliation, Mrp, FinishedGoods } from "./pagesExtra";
+import { GoodsReceipt, Transfers, PhysicalCount, Reconciliation } from "./pagesExtra";
 
 // ================= Dashboard =================
 export function Dashboard() {
@@ -360,70 +360,6 @@ export function Inventory() {
 					</>
 				)}
 			</Drawer>
-		</Page>
-	);
-}
-
-// ================= Production =================
-export function Production() {
-	const [tab, setTab] = useState<"Work orders" | "MRP" | "Bill of materials" | "Quality" | "Finished goods">("Work orders");
-	const plan = sum(productionWeek.map((d) => d.plan));
-	const act = sum(productionWeek.map((d) => d.actual));
-	return (
-		<Page title="Manufacturing" sub="Hosur plant · 2 assembly lines · 6 stations each"
-			actions={<button className="btn" onClick={() => toast("Work order WO-7736 released to Line 2")}>Release work order</button>}>
-			<Stats>
-				<Stat label="Built this week" value={act.toLocaleString("en-IN")} delta={`Plan ${plan.toLocaleString("en-IN")}`} tone="warn" />
-				<Stat label="Work in progress" value={String(sum(stations.map((s) => s.wip)))} delta="Across both lines" />
-				<Stat label="First-pass yield" value="96.8%" delta="+0.6 pts vs last week" tone="good" />
-				<Stat label="Downtime today" value="22 min" delta="End-of-line test rig" tone="bad" />
-			</Stats>
-			<div className="grid-2">
-				<Panel title="Plan vs actual" note="Vehicles per day, this week">
-					<Chart labels={productionWeek.map((d) => d.day)} series={[
-						{ name: "Plan", values: productionWeek.map((d) => d.plan), tone: "muted", kind: "ghost" },
-						{ name: "Actual", values: productionWeek.map((d) => d.actual), tone: "accent" },
-					]} />
-				</Panel>
-				<Panel title="Assembly stations — Line 1" note="Cycle time in minutes, target 4.3">
-					<ul className="stations">
-						{stations.map((s, i) => (
-							<li key={s.name}>
-								<span className="st-no">{i + 1}</span>
-								<span className="st-name">{s.name}<small>{s.wip} in progress</small></span>
-								<span className={`st-cycle ${s.cycle > s.target ? "neg" : ""}`}>{s.cycle.toFixed(1)}</span>
-								<Badge>{s.status}</Badge>
-							</li>
-						))}
-					</ul>
-				</Panel>
-			</div>
-			<Panel right={<Tabs tabs={["Work orders", "MRP", "Bill of materials", "Quality", "Finished goods"] as const} value={tab} onChange={setTab} />}>
-				{tab === "Work orders" && (
-					<Table cols={[
-						{ key: "no", label: "Work order" }, { key: "model", label: "Model" }, { key: "line", label: "Line", hideSm: true },
-						{ key: "prog", label: "Progress", render: (r) => <span className="inline-bar"><Bar pct={(r.done / r.qty) * 100} />{r.done}/{r.qty}</span> },
-						{ key: "due", label: "Due", hideSm: true }, { key: "status", label: "Status", render: (r) => <Badge>{r.status}</Badge> },
-					]} rows={workOrders} />
-				)}
-				{tab === "MRP" && <Mrp />}
-				{tab === "Finished goods" && <FinishedGoods />}
-				{tab === "Bill of materials" && (
-					<Table dense cols={[
-						{ key: "part", label: "E-Ride S1 Pro · BOM rev C", render: (r) => <span style={{ paddingLeft: (r.level - 1) * 20 }} className={r.level === 1 ? "strong" : r.level === 3 ? "sub" : ""}>{r.part}</span> },
-						{ key: "qty", label: "Qty", num: true },
-					]} rows={bom} />
-				)}
-				{tab === "Quality" && (
-					<div className="split">
-						<div>
-							<h3 className="mini">Top defects this week</h3>
-							<HBars rows={quality.map((q) => ({ label: q.defect, value: q.count }))} tone="bad" />
-						</div>
-						<Facts rows={[["Inspected", "1,302 vehicles"], ["Passed first time", "1,260"], ["Reworked", "38"], ["Rejected", "4"], ["Rework hours", "41.5 h"]]} />
-					</div>
-				)}
-			</Panel>
 		</Page>
 	);
 }

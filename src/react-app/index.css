@@ -571,3 +571,17 @@ table.cmp small { display: block; font-size: 11px; }
 .vendor-pick label { display: flex; gap: 8px; align-items: center; font-size: 14px; color: var(--ink); cursor: pointer; }
 .vendor-pick small { margin-left: auto; color: var(--ink-3); }
 @media (max-width: 1100px) { .rfq { grid-template-columns: 1fr; } }
+
+/* ---------- manufacturing additions ---------- */
+table.plan input, .qty-in { width: 76px; border: 1px solid var(--line); background: var(--surface); border-radius: 6px; padding: 5px 8px; text-align: right; font-variant-numeric: tabular-nums; }
+table.plan tr.tot td { background: var(--surface-2); font-weight: 600; }
+table.plan small { font-weight: 500; }
+.wo-stages { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.wo-stages li { display: grid; grid-template-columns: 1fr 120px 56px; gap: 10px; align-items: center; font-size: 13px; }
+.wo-stages small { text-align: right; color: var(--ink-3); }
+.inline-label { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ink-2); }
+.rec-form label.check { flex-direction: row; align-items: center; gap: 8px; color: var(--ink); }
+.alloc-preview.warn { background: var(--warn-soft); border-color: var(--warn); }
+.alloc-preview .hint { margin: 0; }
+.rw-btns { display: inline-flex; gap: 6px; }
+@media (max-width: 860px) { .inline-label { flex-direction: column; align-items: stretch; } .inline-label select { max-width: 100%; } }

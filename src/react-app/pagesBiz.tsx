@@ -230,7 +230,7 @@ export function Masters() {
 				{tab === "Warehouses" && <Table dense cols={[{ key: "n", label: "Location" }, { key: "t", label: "Type" }, { key: "b", label: "Bins", num: true }]} rows={warehouses.map((n, i) => ({ n, t: ["Central warehouse", "Line-side store", "Site warehouse", "Service store"][i], b: [480, 64, 120, 90][i] }))} />}
 				{tab === "Swap stations" && <Table dense cols={[{ key: "id", label: "Station" }, { key: "name", label: "Name" }, { key: "city", label: "City" }, { key: "slots", label: "Slots", num: true }]} rows={swapStations} />}
 				{tab === "Users & roles" && <Table dense cols={[{ key: "n", label: "User" }, { key: "r", label: "Role" }, { key: "s", label: "Access" }]} rows={[
-					{ n: "Ravi Menon", r: "Plant head", s: "All modules · approver up to ₹5 L" },
+					{ n: "Demo User", r: "Plant head", s: "All modules · approver up to ₹5 L" },
 					{ n: "Kavya Shah", r: "Production planner", s: "Production, inventory" },
 					{ n: "Suresh K", r: "Service technician", s: "Mobile app · job cards" },
 					{ n: "Anita Rao", r: "Finance controller", s: "Finance, approvals up to ₹50 L" },

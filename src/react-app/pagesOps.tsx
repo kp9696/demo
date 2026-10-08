@@ -21,7 +21,7 @@ export function Dashboard() {
 	const [area, setArea] = useState<"Manufacturing" | "Inventory" | "Battery & swap" | "Service" | "Finance">("Manufacturing");
 
 	return (
-		<Page title="Good morning, Ravi" sub="Thursday 8 October 2026 · Hosur plant, 6 cities, 8 swap stations">
+		<Page title="Good morning" sub="Thursday 8 October 2026 · Hosur plant, 6 cities, 8 swap stations">
 			<FlowTrack />
 
 			<Stats>

@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useOpenParam } from "./store";
+import { QuotationComparison, useExtraPOs } from "./rfq";
 import {
-	items, purchaseOrders, requisitions, quotes, vendors, productionWeek, stations, workOrders, bom, quality,
+	items, purchaseOrders, requisitions, vendors, productionWeek, stations, workOrders, bom, quality,
 	batteries, swapStations, swapDaily, jobCards, pnl, pnlMonths, flowStages, rfidEvents, rfidHardware,
 	inr, lakh, crore, sum, warehouses,
 } from "./data";
@@ -233,8 +234,10 @@ export function MaterialFlow() {
 export function Procurement() {
 	const [tab, setTab] = useState<"Purchase orders" | "Goods receipt & inspection" | "Requisitions" | "Quotation comparison" | "Vendors">("Purchase orders");
 	const [po, setPo] = useState<PO | null>(null);
+	const [extraPOs] = useExtraPOs();
+	const allPOs = [...extraPOs, ...purchaseOrders];
 	const openP = useOpenParam();
-	useEffect(() => { const p = purchaseOrders.find((x) => x.no === openP.id); if (p) { setTab("Purchase orders"); setPo(p); } }, [openP]);
+	useEffect(() => { const p = allPOs.find((x) => x.no === openP.id); if (p) { setTab("Purchase orders"); setPo(p); } }, [openP]);
 	const open = purchaseOrders.filter((p) => p.status !== "Inspected" && p.status !== "Received");
 	return (
 		<Page title="Procurement" sub="From requisition to goods receipt and inspection"
@@ -255,7 +258,7 @@ export function Procurement() {
 						{ key: "due", label: "Due", hideSm: true },
 						{ key: "received", label: "Received", render: (r: PO) => <span className="inline-bar"><Bar pct={r.received} />{r.received}%</span>, hideSm: true },
 						{ key: "status", label: "Status", render: (r: PO) => <Badge>{r.status}</Badge> },
-					]} rows={purchaseOrders} onRow={setPo} />
+					]} rows={allPOs} onRow={setPo} />
 				)}
 				{tab === "Goods receipt & inspection" && <GoodsReceipt />}
 				{tab === "Requisitions" && (
@@ -266,22 +269,7 @@ export function Procurement() {
 						{ key: "status", label: "Status", render: (r) => <Badge>{r.status}</Badge> },
 					]} rows={requisitions} />
 				)}
-				{tab === "Quotation comparison" && (
-					<>
-						<p className="panel-note">{quotes.item} · 3 quotes received for PR-1883</p>
-						<div className="quotes">
-							{quotes.rows.map((q, i) => (
-								<div key={q.vendor} className={`quote ${i === 0 ? "best" : ""}`}>
-									{i === 0 && <span className="badge good">Recommended</span>}
-									<h3>{q.vendor}</h3>
-									<div className="quote-price">{inr(q.price)}<small> / unit</small></div>
-									<Facts rows={[["Total", inr(q.price * 800)], ["Lead time", `${q.lead} days`], ["Payment", q.terms], ["Warranty", q.warranty], ["Score", <span className="inline-bar"><Bar pct={q.score} />{q.score}</span>]]} />
-									<button className={`btn ${i === 0 ? "" : "ghost"}`} onClick={() => toast(`PO raised to ${q.vendor} — sent for approval`)}>Raise PO</button>
-								</div>
-							))}
-						</div>
-					</>
-				)}
+				{tab === "Quotation comparison" && <QuotationComparison />}
 				{tab === "Vendors" && (
 					<Table cols={[
 						{ key: "name", label: "Vendor" }, { key: "category", label: "Supplies", hideSm: true }, { key: "city", label: "City", hideSm: true },

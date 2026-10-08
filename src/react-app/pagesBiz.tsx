@@ -3,6 +3,7 @@ import { jobCards, warrantyClaims, complaints, dealers, pnl, pnlMonths, costCent
 import type { Approval } from "./data";
 import { Appointments, BuPnl } from "./pagesExtra";
 import { usePersist } from "./store";
+import { useRfqs } from "./rfq";
 import { Page, Panel, Stat, Stats, Badge, Table, Chart, Bar, Tabs, Facts, toast } from "./ui";
 
 // ================= Dealer & service =================
@@ -136,7 +137,8 @@ export function Approvals() {
 	const [list, setList] = usePersist<Approval[]>("approvals", approvals);
 	const types = ["All", ...Array.from(new Set(approvals.map((a) => a.type)))];
 	const [t, setT] = useState("All");
-	const act = (a: Approval, ok: boolean) => { setList((l) => l.filter((x) => x.id !== a.id)); toast(`${a.id} ${ok ? "approved" : "sent back"} — ${a.by} notified`); };
+	const [, setRfqs] = useRfqs();
+	const act = (a: Approval, ok: boolean) => { setList((l) => l.filter((x) => x.id !== a.id)); if (a.type === "Vendor selection") setRfqs((rs) => rs.map((r) => (r.no === a.id ? { ...r, status: ok ? "Approved" : "Sent back" } : r))); toast(`${a.id} ${ok ? "approved" : "sent back"} — ${a.by} notified`); };
 	const shown = list.filter((a) => t === "All" || a.type === t);
 	return (
 		<Page title="Approvals" sub="Everything waiting on you, from every workflow">

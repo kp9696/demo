@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { jobCards, warrantyClaims, complaints, dealers, pnl, pnlMonths, costCentres, approvals, items, vendors, swapStations, warehouses, inr, crore, sum } from "./data";
+import { jobCards, warrantyClaims, complaints, dealers, pnl, pnlMonths, costCentres, approvals, inr, crore, sum } from "./data";
 import type { Approval } from "./data";
 import { Appointments, BuPnl } from "./pagesExtra";
+import { usePersist } from "./store";
 import { Page, Panel, Stat, Stats, Badge, Table, Chart, Bar, Tabs, Facts, toast } from "./ui";
 
 // ================= Dealer & service =================
@@ -132,7 +133,7 @@ export function Finance() {
 
 // ================= Approvals =================
 export function Approvals() {
-	const [list, setList] = useState<Approval[]>(approvals);
+	const [list, setList] = usePersist<Approval[]>("approvals", approvals);
 	const types = ["All", ...Array.from(new Set(approvals.map((a) => a.type)))];
 	const [t, setT] = useState("All");
 	const act = (a: Approval, ok: boolean) => { setList((l) => l.filter((x) => x.id !== a.id)); toast(`${a.id} ${ok ? "approved" : "sent back"} — ${a.by} notified`); };
@@ -215,28 +216,3 @@ export function Reports() {
 }
 
 // ================= Master data =================
-export function Masters() {
-	const tabs = ["Items", "Vendors", "Warehouses", "Swap stations", "Users & roles"] as const;
-	const [tab, setTab] = useState<(typeof tabs)[number]>("Items");
-	return (
-		<Page title="Master data" sub="One source of truth for items, partners, locations and people"
-			actions={<button className="btn" onClick={() => toast(`New ${tab.toLowerCase().replace(/s$/, "")} form opened`)}>Add record</button>}>
-			<Panel right={<Tabs tabs={tabs} value={tab} onChange={setTab} />}>
-				{tab === "Items" && <Table dense cols={[
-					{ key: "code", label: "Code" }, { key: "name", label: "Name" }, { key: "category", label: "Category", hideSm: true },
-					{ key: "uom", label: "Unit", hideSm: true }, { key: "tracking", label: "Tracking" }, { key: "rfid", label: "RFID", render: (r) => r.rfid ? "Yes" : "—" },
-				]} rows={items} />}
-				{tab === "Vendors" && <Table dense cols={[{ key: "name", label: "Vendor" }, { key: "category", label: "Category" }, { key: "city", label: "City" }, { key: "g", label: "GSTIN", hideSm: true, render: (r) => `29AAB${r.name.slice(0, 3).toUpperCase()}1234F1Z5` }]} rows={vendors} />}
-				{tab === "Warehouses" && <Table dense cols={[{ key: "n", label: "Location" }, { key: "t", label: "Type" }, { key: "b", label: "Bins", num: true }]} rows={warehouses.map((n, i) => ({ n, t: ["Central warehouse", "Line-side store", "Site warehouse", "Service store"][i], b: [480, 64, 120, 90][i] }))} />}
-				{tab === "Swap stations" && <Table dense cols={[{ key: "id", label: "Station" }, { key: "name", label: "Name" }, { key: "city", label: "City" }, { key: "slots", label: "Slots", num: true }]} rows={swapStations} />}
-				{tab === "Users & roles" && <Table dense cols={[{ key: "n", label: "User" }, { key: "r", label: "Role" }, { key: "s", label: "Access" }]} rows={[
-					{ n: "Demo User", r: "Plant head", s: "All modules · approver up to ₹5 L" },
-					{ n: "Kavya Shah", r: "Production planner", s: "Production, inventory" },
-					{ n: "Suresh K", r: "Service technician", s: "Mobile app · job cards" },
-					{ n: "Anita Rao", r: "Finance controller", s: "Finance, approvals up to ₹50 L" },
-					{ n: "Greenline Motors", r: "Dealer", s: "Dealer portal · own vehicles & jobs" },
-				]} />}
-			</Panel>
-		</Page>
-	);
-}

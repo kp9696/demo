@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useOpenParam } from "./store";
 import {
 	items, purchaseOrders, requisitions, quotes, vendors, productionWeek, stations, workOrders, bom, quality,
 	batteries, swapStations, swapDaily, jobCards, pnl, pnlMonths, flowStages, rfidEvents, rfidHardware,
@@ -232,6 +233,8 @@ export function MaterialFlow() {
 export function Procurement() {
 	const [tab, setTab] = useState<"Purchase orders" | "Goods receipt & inspection" | "Requisitions" | "Quotation comparison" | "Vendors">("Purchase orders");
 	const [po, setPo] = useState<PO | null>(null);
+	const openP = useOpenParam();
+	useEffect(() => { const p = purchaseOrders.find((x) => x.no === openP.id); if (p) { setTab("Purchase orders"); setPo(p); } }, [openP]);
 	const open = purchaseOrders.filter((p) => p.status !== "Inspected" && p.status !== "Received");
 	return (
 		<Page title="Procurement" sub="From requisition to goods receipt and inspection"
@@ -312,6 +315,8 @@ export function Inventory() {
 	const [wh, setWh] = useState("All locations");
 	const [q, setQ] = useState("");
 	const [sel, setSel] = useState<Item | null>(null);
+	const openI = useOpenParam();
+	useEffect(() => { const i = items.find((x) => x.code === openI.id); if (i) setSel(i); }, [openI]);
 	const [tab, setTab] = useState<"Stock" | "Transfers" | "Physical count" | "Reconciliation">("Stock");
 	const rows = useMemo(() => items.filter((i) => (wh === "All locations" || i.warehouse === wh) && (i.name + i.code).toLowerCase().includes(q.toLowerCase())), [wh, q]);
 	const value = sum(items.map((i) => i.onHand * i.unitCost));

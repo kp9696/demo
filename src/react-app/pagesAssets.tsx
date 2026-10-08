@@ -1,7 +1,9 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useOpenParam } from "./store";
+import { AllocateDrawer, AllocationList, RebalanceDrawer, RebalanceList, useRebal, useStationAdj } from "./batteryOps";
 import { damage, batteries, batteryHistory, vehicles, swapStations, swapDaily, swapTransactions, cities, inr, lakh, sum } from "./data";
 import type { Battery, Vehicle } from "./data";
-import { Page, Panel, Stat, Stats, Badge, Table, Chart, HBars, Cell, Tabs, Drawer, Facts, Timeline, Search, toast } from "./ui";
+import { Page, Panel, Stat, Stats, Badge, Table, Chart, HBars, Cell, Tabs, Drawer, Facts, Timeline, Search } from "./ui";
 
 // ================= Batteries =================
 const batFilters = ["All", "In vehicle", "Charging", "Ready at station", "In transit", "Service", "End of life"] as const;
@@ -9,13 +11,16 @@ export function Batteries() {
 	const [f, setF] = useState<(typeof batFilters)[number]>("All");
 	const [q, setQ] = useState("");
 	const [sel, setSel] = useState<Battery | null>(null);
+	const [allocOpen, setAllocOpen] = useState(false);
+	const open = useOpenParam();
+	useEffect(() => { const b = batteries.find((x) => x.id === open.id); if (b) setSel(b); }, [open]);
 	const rows = useMemo(() => batteries.filter((b) => (f === "All" || b.status === f) && (b.id + b.rfid + (b.vehicle ?? "")).toLowerCase().includes(q.toLowerCase())), [f, q]);
 	const count = (s: Battery["status"]) => batteries.filter((b) => b.status === s).length * 120;
 	const total = batteries.length * 120;
 	const sohBands = [["95–100%", 95, 100], ["90–94%", 90, 94], ["85–89%", 85, 89], ["80–84%", 80, 84], ["Below 80%", 0, 79]] as const;
 	return (
 		<Page title="Battery management" sub="Every pack, from cell batch to recycling — synced from the BMS every 15 minutes"
-			actions={<button className="btn" onClick={() => toast("Allocation BA-1171 created for 40 packs")}>Allocate batteries</button>}>
+			actions={<button className="btn" onClick={() => setAllocOpen(true)}>Allocate batteries</button>}>
 			<Stats>
 				<Stat label="Total packs" value={total.toLocaleString("en-IN")} delta="48V 50Ah LFP" />
 				<Stat label="In vehicles" value={count("In vehicle").toLocaleString("en-IN")} delta={`${Math.round((count("In vehicle") / total) * 100)}% utilisation`} tone="good" />
@@ -30,6 +35,10 @@ export function Batteries() {
 					<HBars rows={sohBands.map(([label, a, b]) => ({ label, value: batteries.filter((x) => x.soh >= a && x.soh <= b).length * 120 }))} fmt={(n) => n.toLocaleString("en-IN")} />
 				</Panel>
 			</div>
+			<Panel title="Battery allocations" note="Packs sent to production lines and swap stations, each approved before it moves">
+				<AllocationList />
+			</Panel>
+			<AllocateDrawer open={allocOpen} onClose={() => setAllocOpen(false)} />
 			<Panel right={
 				<div className="filters">
 					<Search value={q} onChange={setQ} placeholder="Battery ID, RFID or VIN" />
@@ -73,6 +82,8 @@ export function Vehicles() {
 	const [f, setF] = useState<(typeof vStages)[number]>("All");
 	const [q, setQ] = useState("");
 	const [sel, setSel] = useState<Vehicle | null>(null);
+	const open = useOpenParam();
+	useEffect(() => { const v = vehicles.find((x) => x.vin === open.id); if (v) setSel(v); }, [open]);
 	const rows = vehicles.filter((v) => (f === "All" || v.status === f) && (v.vin + v.reg + v.customer).toLowerCase().includes(q.toLowerCase()));
 	return (
 		<Page title="Vehicles" sub="One digital record per vehicle, from the first part fitted to the latest service">
@@ -145,17 +156,28 @@ function VehicleRecord({ v }: { v: Vehicle }) {
 export function Swap() {
 	const [tab, setTab] = useState<"Stations" | "Transactions" | "Revenue">("Stations");
 	const [city, setCity] = useState("All cities");
-	const st = swapStations.filter((s) => city === "All cities" || s.city === city);
+	const [rebalOpen, setRebalOpen] = useState(false);
+	const [rebal] = useRebal();
+	const [adj] = useStationAdj();
+	const live = swapStations.map((s) => {
+		const ready = Math.max(0, Math.min(s.slots - s.faulty, s.ready + (adj[s.id] ?? 0)));
+		const charging = Math.max(0, Math.min(s.charging, s.slots - s.faulty - ready));
+		const incoming = rebal.filter((r) => r.status === "In transit" && r.to === s.name).reduce((a, r) => a + r.qty, 0);
+		const outgoing = rebal.filter((r) => r.status === "In transit" && r.from === s.name).reduce((a, r) => a + r.qty, 0);
+		return { ...s, ready, charging, incoming, outgoing };
+	});
+	const st = live.filter((s) => city === "All cities" || s.city === city);
+	const short = live.filter((s) => s.ready / s.slots < 0.2);
 	const swapsToday = sum(swapStations.map((s) => s.swapsToday));
 	const monthRev = sum(swapDaily.map((d) => d.revenue));
 	return (
 		<Page title="Swap network" sub="8 stations · 160 slots · live battery stock and swap revenue"
-			actions={<button className="btn" onClick={() => toast("Rebalancing plan sent: 12 packs Koramangala → HSR")}>Rebalance batteries</button>}>
+			actions={<button className="btn" onClick={() => setRebalOpen(true)}>Rebalance batteries</button>}>
 			<Stats>
 				<Stat label="Swaps today" value={swapsToday.toLocaleString("en-IN")} delta="+6.2% vs last Thursday" tone="good" />
 				<Stat label="Revenue today" value={inr(swapsToday * 62)} delta="₹62 average per swap" />
 				<Stat label="Revenue (30 days)" value={lakh(monthRev)} delta="+11% month on month" tone="good" />
-				<Stat label="Stations low on charged packs" value="2" delta="HSR Layout, Kharadi" tone="bad" />
+				<Stat label="Stations low on charged packs" value={String(short.length)} delta={short.length ? short.map((s) => s.name.split(" ")[0]).join(", ") : "All stations stocked"} tone={short.length ? "bad" : "good"} />
 			</Stats>
 			<Panel right={
 				<div className="filters">
@@ -178,9 +200,12 @@ export function Swap() {
 								<div className="station-foot">
 									<span><b>{s.ready}</b> ready</span><span><b>{s.charging}</b> charging</span><span><b>{s.swapsToday}</b> swaps today</span><span><b>{s.uptime}%</b> uptime</span>
 								</div>
+								{(s.incoming > 0 || s.outgoing > 0) && <p className="st-move">{s.incoming > 0 ? `+${s.incoming} packs on the way in` : `${s.outgoing} packs on the way out`}</p>}
 							</article>
 						))}
 					</div>
+					<h3 className="mini" style={{ marginTop: 22 }}>Rebalancing transfers</h3>
+					<RebalanceList />
 					</>
 				)}
 				{tab === "Transactions" && (
@@ -211,6 +236,7 @@ export function Swap() {
 					</>
 				)}
 			</Panel>
+			<RebalanceDrawer open={rebalOpen} onClose={() => setRebalOpen(false)} />
 		</Page>
 	);
 }

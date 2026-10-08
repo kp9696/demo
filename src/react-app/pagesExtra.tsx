@@ -1,19 +1,21 @@
 import { useState } from "react";
 import type { FormEvent } from "react";
 import { grns, inspectionPlan, transfers, counts, recon, mrp, fgYard, appointments, buPnl, warehouses, items, dealers, inr, crore } from "./data";
+import { usePersist } from "./store";
 import { Badge, Table, Bar, Facts, HBars, toast } from "./ui";
 
 // ---------- Goods receipt & inspection (Procurement) ----------
 type Grn = (typeof grns)[number];
 export function GoodsReceipt() {
-	const [rows, setRows] = useState<Grn[]>(grns);
-	const [sel, setSel] = useState<Grn | null>(grns[0]);
+	const [rows, setRows] = usePersist<Grn[]>("grns", grns);
+	const [selNo, setSelNo] = useState<string | null>(grns[0].no);
+	const sel = rows.find((g) => g.no === selNo) ?? null;
 	const [checks, setChecks] = useState<Record<number, "Pass" | "Fail" | undefined>>({});
 	const decide = (status: string) => {
 		if (!sel) return;
 		setRows((r) => r.map((g) => (g.no === sel.no ? { ...g, status } : g)));
 		toast(`${sel.no} ${status.toLowerCase()} — stock ${status === "Rejected" ? "not posted, vendor informed" : "posted to bin A-04"}`);
-		setSel(null); setChecks({});
+		setSelNo(null); setChecks({});
 	};
 	const allChecked = inspectionPlan.every((_, i) => checks[i]);
 	const anyFail = Object.values(checks).includes("Fail");
@@ -26,7 +28,7 @@ export function GoodsReceipt() {
 					{ key: "item", label: "Item", render: (r: Grn) => <>{r.item}<small className="sub"> · {r.qty.toLocaleString("en-IN")}</small></> },
 					{ key: "tags", label: "Tags read", hideSm: true },
 					{ key: "status", label: "Status", render: (r: Grn) => <Badge>{r.status}</Badge> },
-				]} rows={rows} onRow={(r) => { setSel(r); setChecks({}); }} />
+				]} rows={rows} onRow={(r) => { setSelNo(r.no); setChecks({}); }} />
 			</div>
 			<div className="inspect">
 				{sel ? (
@@ -62,7 +64,7 @@ export function GoodsReceipt() {
 
 // ---------- Stock transfers ----------
 export function Transfers() {
-	const [rows, setRows] = useState(transfers);
+	const [rows, setRows] = usePersist("transfers", transfers);
 	const [from, setFrom] = useState(warehouses[0]);
 	const [to, setTo] = useState(warehouses[2]);
 	const [item, setItem] = useState(items[0].name);
@@ -94,7 +96,7 @@ export function Transfers() {
 
 // ---------- Physical count ----------
 export function PhysicalCount() {
-	const [rows, setRows] = useState(counts);
+	const [rows, setRows] = usePersist("counts", counts);
 	return (
 		<>
 			<div className="row-btns end"><button className="btn" onClick={() => { setRows((r) => r.map((c) => c.status === "Scheduled" ? { ...c, status: "In progress" } : c)); toast("PC-0415 started on handheld HH-03"); }}>Start scheduled count</button></div>
@@ -110,7 +112,7 @@ export function PhysicalCount() {
 
 // ---------- Reconciliation ----------
 export function Reconciliation() {
-	const [rows, setRows] = useState(recon);
+	const [rows, setRows] = usePersist("recon", recon);
 	return (
 		<Table cols={[
 			{ key: "item", label: "Item" },
@@ -165,7 +167,7 @@ export function FinishedGoods() {
 
 // ---------- Service appointments ----------
 export function Appointments() {
-	const [rows, setRows] = useState(appointments);
+	const [rows, setRows] = usePersist("appointments", appointments);
 	const [name, setName] = useState("");
 	const [reg, setReg] = useState("");
 	const [type, setType] = useState("Periodic service");

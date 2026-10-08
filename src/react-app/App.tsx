@@ -2,10 +2,13 @@ import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { Dashboard, MaterialFlow, Procurement, Inventory, Production } from "./pagesOps";
 import { Batteries, Vehicles, Swap } from "./pagesAssets";
-import { Service, Finance, Approvals, Reports, Masters } from "./pagesBiz";
+import { Service, Finance, Approvals, Reports } from "./pagesBiz";
+import { Masters } from "./masters";
 import { Mobile } from "./mobileApp";
 import { Toaster } from "./ui";
-import { go } from "./nav";
+import { GlobalSearch, Notifications } from "./topbar";
+import { usePersist, resetDemo } from "./store";
+import { approvals } from "./data";
 
 const I = (d: string) => (
 	<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={d} /></svg>
@@ -38,7 +41,7 @@ const nav: { group: string; items: [Route, string, () => ReactNode, string?][] }
 const all = nav.flatMap((g) => g.items);
 
 function useRoute(): Route {
-	const read = () => (window.location.hash.replace(/^#\/?/, "") || "dashboard") as Route;
+	const read = () => (window.location.hash.replace(/^#\/?/, "").split("?")[0] || "dashboard") as Route;
 	const [r, setR] = useState<Route>(read);
 	useEffect(() => {
 		const h = () => setR(read());
@@ -51,6 +54,8 @@ function useRoute(): Route {
 export default function App() {
 	const route = useRoute();
 	const [menu, setMenu] = useState(false);
+	const [apList] = usePersist("approvals", approvals);
+	const [armed, setArmed] = useState(false);
 	const Cur = all.find(([k]) => k === route)![2];
 	useEffect(() => { setMenu(false); }, [route]);
 	return (
@@ -66,7 +71,7 @@ export default function App() {
 							<span className="nav-title">{g.group}</span>
 							{g.items.map(([k, label, , count]) => (
 								<a key={k} href={`#/${k}`} className={route === k ? "on" : ""} aria-current={route === k ? "page" : undefined}>
-									{icons[k]}<span>{label}</span>{count && <em>{count}</em>}
+									{icons[k]}<span>{label}</span>{(k === "approvals" ? (apList.length ? String(apList.length) : "") : count) && <em>{k === "approvals" ? apList.length : count}</em>}
 								</a>
 							))}
 						</div>
@@ -76,15 +81,17 @@ export default function App() {
 					<span className="avatar">DU</span>
 					<div><b>Demo User</b><small>Plant head</small></div>
 				</div>
+				<button className={`reset ${armed ? "armed" : ""}`} onClick={() => { if (armed) resetDemo(); else { setArmed(true); window.setTimeout(() => setArmed(false), 4000); } }}>
+					{armed ? "Click again to clear all demo changes" : "Reset demo data"}
+				</button>
 			</aside>
 			<div className="scrim" onClick={() => setMenu(false)} />
 			<main className="main">
 				<div className="topbar">
 					<button className="btn ghost menu-btn" onClick={() => setMenu(true)} aria-label="Open menu">☰</button>
-					<form className="global-search" onSubmit={(e) => { e.preventDefault(); const v = (new FormData(e.currentTarget).get("q") as string || "").toUpperCase(); go(v.startsWith("BAT") ? "batteries" : v.startsWith("PO") ? "procurement" : v.startsWith("MD9") || v.startsWith("VIN") ? "vehicles" : "inventory"); }}>
-						<input name="q" placeholder="Search VIN, battery ID, PO, item…" aria-label="Search everything" />
-					</form>
-					<span className="demo-tag">Demo data</span>
+					<GlobalSearch />
+					<span className="demo-tag" title="Changes you make are kept in this browser until you reset">Demo data · saved in this browser</span>
+					<Notifications />
 				</div>
 				<Cur />
 			</main>

@@ -1,8 +1,9 @@
 import { useState } from "react";
 import type { FormEvent } from "react";
-import { grns, inspectionPlan, transfers, counts, recon, mrp, fgYard, appointments, buPnl, warehouses, items, dealers, inr, crore } from "./data";
+import { grns, inspectionPlan, mrp, fgYard, appointments, buPnl, dealers, crore } from "./data";
 import { usePersist } from "./store";
 import { usePRs, usePoState } from "./procure";
+import { useStock, useApprovalList, itemByName, CENTRAL } from "./stock";
 import { Badge, Table, Bar, Facts, HBars, toast } from "./ui";
 
 // ---------- Goods receipt & inspection (Procurement) ----------
@@ -13,11 +14,14 @@ export function GoodsReceipt() {
 	const sel = rows.find((g) => g.no === selNo) ?? null;
 	const [checks, setChecks] = useState<Record<number, "Pass" | "Fail" | undefined>>({});
 	const [, setPoSt] = usePoState();
+	const { post } = useStock();
 	const decide = (status: string) => {
 		if (!sel) return;
+		const it = itemByName(sel.item);
+		if (status !== "Rejected" && it) post([{ type: "Receipt", code: it.code, loc: CENTRAL, qty: status === "Accepted" ? sel.qty : Math.round(sel.qty * 0.8), ref: sel.no, by: "Gate G1 · inspection passed", batch: `B-2610-${sel.no.slice(-2)}`, note: sel.vendor }]);
 		if (status !== "Rejected") setPoSt((s) => ({ ...s, [sel.po]: { ...s[sel.po], status: status === "Accepted" ? "Received" : "Partially received", received: status === "Accepted" ? 100 : 80, history: [{ when: "Just now", what: `${sel.no} ${status === "Accepted" ? "accepted after inspection" : "partly accepted, rejects returned"}` }, ...(s[sel.po]?.history ?? [])] } }));
 		setRows((r) => r.map((g) => (g.no === sel.no ? { ...g, status } : g)));
-		toast(`${sel.no} ${status.toLowerCase()} — stock ${status === "Rejected" ? "not posted, vendor informed" : "posted to bin A-04"}`);
+		toast(`${sel.no} ${status.toLowerCase()} — ${status === "Rejected" ? "stock not posted, vendor informed" : `${status === "Accepted" ? sel.qty : Math.round(sel.qty * 0.8)} added to Central WH stock`}`);
 		setSelNo(null); setChecks({});
 	};
 	const allChecked = inspectionPlan.every((_, i) => checks[i]);
@@ -65,75 +69,11 @@ export function GoodsReceipt() {
 	);
 }
 
-// ---------- Stock transfers ----------
-export function Transfers() {
-	const [rows, setRows] = usePersist("transfers", transfers);
-	const [from, setFrom] = useState(warehouses[0]);
-	const [to, setTo] = useState(warehouses[2]);
-	const [item, setItem] = useState(items[0].name);
-	const [qty, setQty] = useState("50");
-	const submit = (e: FormEvent) => {
-		e.preventDefault();
-		if (from === to) { toast("Pick two different locations for the transfer"); return; }
-		const no = `TR-0${932 + rows.length - 4}`;
-		setRows((r) => [{ no, from, to, items: `${item} × ${qty}`, status: "Pending approval", eta: "—" }, ...r]);
-		toast(`${no} created and sent to the stores head for approval`);
-	};
-	return (
-		<>
-			<form className="inline-form" onSubmit={submit}>
-				<label>From<select id="tr-from" value={from} onChange={(e) => setFrom(e.target.value)}>{warehouses.map((w) => <option key={w}>{w}</option>)}</select></label>
-				<label>To<select id="tr-to" value={to} onChange={(e) => setTo(e.target.value)}>{warehouses.map((w) => <option key={w}>{w}</option>)}</select></label>
-				<label>Item<select id="tr-item" value={item} onChange={(e) => setItem(e.target.value)}>{items.map((i) => <option key={i.code}>{i.name}</option>)}</select></label>
-				<label>Qty<input id="tr-qty" className="search" type="number" min="1" value={qty} onChange={(e) => setQty(e.target.value)} /></label>
-				<button className="btn" type="submit">Create transfer</button>
-			</form>
-			<Table cols={[
-				{ key: "no", label: "Transfer" }, { key: "from", label: "From", hideSm: true }, { key: "to", label: "To" },
-				{ key: "items", label: "Items", hideSm: true }, { key: "eta", label: "Arrives", hideSm: true },
-				{ key: "status", label: "Status", render: (r) => <Badge>{r.status}</Badge> },
-			]} rows={rows} />
-		</>
-	);
-}
-
-// ---------- Physical count ----------
-export function PhysicalCount() {
-	const [rows, setRows] = usePersist("counts", counts);
-	return (
-		<>
-			<div className="row-btns end"><button className="btn" onClick={() => { setRows((r) => r.map((c) => c.status === "Scheduled" ? { ...c, status: "In progress" } : c)); toast("PC-0415 started on handheld HH-03"); }}>Start scheduled count</button></div>
-			<Table cols={[
-				{ key: "no", label: "Count" }, { key: "area", label: "Area" }, { key: "method", label: "Method", hideSm: true },
-				{ key: "prog", label: "Counted", render: (r) => <span className="inline-bar"><Bar pct={(r.counted / r.items) * 100} />{r.counted}/{r.items}</span> },
-				{ key: "variance", label: "Variance", num: true, render: (r) => <span className={r.variance ? "neg" : ""}>{r.variance > 0 ? "+" : ""}{r.variance}</span> },
-				{ key: "status", label: "Status", render: (r) => <Badge>{r.status}</Badge> },
-			]} rows={rows} />
-		</>
-	);
-}
-
-// ---------- Reconciliation ----------
-export function Reconciliation() {
-	const [rows, setRows] = usePersist("recon", recon);
-	return (
-		<Table cols={[
-			{ key: "item", label: "Item" },
-			{ key: "system", label: "System", num: true, hideSm: true }, { key: "physical", label: "Physical", num: true, hideSm: true },
-			{ key: "diff", label: "Difference", num: true, render: (r) => <span className={r.diff < 0 ? "neg" : r.diff > 0 ? "pos" : ""}>{r.diff > 0 ? "+" : ""}{r.diff}</span> },
-			{ key: "value", label: "Value", num: true, render: (r) => inr(r.value) },
-			{ key: "reason", label: "Reason", hideSm: true },
-			{ key: "status", label: "Status", render: (r) => <Badge>{r.status}</Badge> },
-			{ key: "a", label: "", render: (r) => r.status === "Write-off pending" || r.status === "Investigating" ? <button className="btn sm ghost" onClick={() => { setRows((x) => x.map((y) => y.item === r.item ? { ...y, status: "Sent for approval" } : y)); toast(`Adjustment for ${r.item} sent to finance for approval`); }}>Post adjustment</button> : null },
-		]} rows={rows} />
-	);
-}
-
 // ---------- MRP ----------
 export function Mrp() {
 	const [ran, setRan] = useState("08 Oct, 06:00");
 	const [prs, setPrs] = usePRs();
-	const [, setAp] = usePersist<{ id: string; type: string; title: string; by: string; value?: number; age: string; step: string }[]>("approvals", []);
+	const [, setAp] = useApprovalList();
 	const raise = (item: string, short: number) => {
 		const qty = Math.ceil((short * 1.5) / 100) * 100;
 		const no = `PR-${1900 + prs.length}`;

@@ -617,3 +617,28 @@ table.plan small { font-weight: 500; }
 .cmp-list li > div:first-child { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
 .cmp-list small { color: var(--ink-3); }
 .cmp-act { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+
+/* ---------- inventory: warehouses and bins ---------- */
+.wh-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-bottom: 18px; }
+.wh-card { text-align: left; border: 1px solid var(--line); background: var(--surface); border-radius: 10px; padding: 12px 14px; cursor: pointer; display: flex; flex-direction: column; gap: 3px; font: inherit; color: inherit; }
+.wh-card span:first-of-type { font-size: 20px; font-weight: 600; }
+.wh-card small { color: var(--ink-3); }
+.wh-card.on { border-color: var(--accent); box-shadow: inset 3px 0 0 var(--accent); }
+.bin-grid { display: flex; flex-direction: column; gap: 4px; overflow-x: auto; padding-bottom: 4px; }
+.bin-row { display: grid; grid-template-columns: 22px repeat(12, minmax(30px, 1fr)); gap: 4px; align-items: center; }
+.bin-aisle { font-weight: 600; color: var(--ink-2); text-align: center; }
+.bin { height: 38px; border-radius: 5px; border: 1px solid var(--line); cursor: pointer; font: inherit; display: grid; place-items: center; }
+.bin small { font-size: 10px; color: var(--ink-3); }
+.bin.empty { background: var(--surface-2); }
+.bin.low { background: var(--accent-soft); border-color: var(--accent); }
+.bin.mid { background: var(--accent); border-color: var(--accent); }
+.bin.mid small, .bin.full small { color: #fff; }
+.bin.full { background: var(--side); border-color: var(--side); }
+.bin.on { outline: 2px solid var(--warn); outline-offset: 1px; }
+.slot-legend i.bl-e { background: var(--surface-2); }
+.slot-legend i.bl-l { background: var(--accent-soft); border-color: var(--accent); }
+.slot-legend i.bl-m { background: var(--accent); border-color: var(--accent); }
+.slot-legend i.bl-f { background: var(--side); border-color: var(--side); }
+.chart .line.accent { stroke: var(--accent); }
+.chart .dot.accent { stroke: var(--accent); }
+.bin { display: flex; align-items: center; justify-content: center; padding: 0; }

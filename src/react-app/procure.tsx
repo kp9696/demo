@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
-import { purchaseOrders, requisitions, vendors, items, approvals, inr, lakh, crore, sum } from "./data";
+import { purchaseOrders, vendors, items, approvals, inr, lakh, crore, sum } from "./data";
 import type { Approval } from "./data";
 import { Page, Panel, Stat, Stats, Badge, Table, Chart, HBars, Bar, Tabs, Drawer, Facts, Timeline, toast } from "./ui";
 import { GoodsReceipt } from "./pagesExtra";
@@ -9,12 +9,11 @@ import type { Rfq } from "./rfq";
 import { usePersist, useOpenParam } from "./store";
 
 // ---------- shared state ----------
-export type PR = { no: string; item: string; qty: number; need: string; by: string; reason: string; source: "Manual" | "MRP" | "Reorder"; status: string; link?: string };
+export type { PR } from "./stock";
+export { usePRs } from "./stock";
+import { usePRs } from "./stock";
+import type { PR } from "./stock";
 type PoState = { status?: string; received?: number; lr?: string; eta?: string; history?: { when: string; what: string }[] };
-
-export function usePRs() {
-	return usePersist<PR[]>("prs", requisitions.map((r) => ({ ...r, reason: r.no === "PR-1882" ? "Cells for next week's production plan" : "Below reorder level", source: r.no === "PR-1882" ? "MRP" : "Reorder", link: r.no === "PR-1879" ? "RFQ-0416" : r.no === "PR-1876" ? "PO-26-4125" : undefined })));
-}
 const poSeed: Record<string, PoState> = {
 	"PO-26-4123": { status: "Dispatched", lr: "LR 55210", eta: "06 Oct 2026", history: [{ when: "02 Oct", what: "Vendor dispatched — LR 55210, ETA 06 Oct 2026" }] },
 	"PO-26-4130": { status: "Dispatched", lr: "ASN 9921", eta: "11 Oct 2026", history: [{ when: "07 Oct", what: "Vendor dispatched — ASN 9921, ETA 11 Oct 2026" }] },

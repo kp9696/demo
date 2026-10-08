@@ -4,6 +4,7 @@ import { dealers, batteries, jobCards, warrantyClaims, complaints, pnl, inr, cro
 import { Page, Panel, Stat, Stats, Badge, Table, Chart, Tabs, Drawer, Facts, Timeline, Search, toast } from "./ui";
 import { Appointments } from "./pagesExtra";
 import { usePersist } from "./store";
+import { useStock, itemByName, SERVICE } from "./stock";
 import { useVehicles, useOverrides } from "./vehicles";
 import type { V } from "./vehicles";
 
@@ -135,6 +136,7 @@ function JobDetail({ job }: { job: Job }) {
 	const [, setJobs] = useJobs();
 	const [, setClaims] = useClaims();
 	const [used, setUsed] = useStockUsed();
+	const { post: postStock } = useStock();
 	const [, setOv] = useOverrides();
 	const vehiclesNow = useVehicles();
 	const [note, setNote] = useState("");
@@ -160,6 +162,8 @@ function JobDetail({ job }: { job: Job }) {
 		const p = job.parts[i];
 		if (stockOf(p.part) < p.qty) { toast(`Only ${stockOf(p.part)} × ${p.part} in the service store — reorder from Service stock`); return; }
 		setUsed((u) => ({ ...u, [p.part]: (u[p.part] ?? 0) + p.qty }));
+		const it = itemByName(p.part);
+		if (it) postStock([{ type: "Issue to service", code: it.code, loc: SERVICE, qty: -p.qty, ref: job.no, by: job.tech, note: job.dealer }]);
 		const parts = job.parts.map((x, k) => (k === i ? { ...x, status: "Issued" as const } : x));
 		upd({ parts, status: parts.some((x) => x.status === "Requested") ? "Awaiting parts" : job.status === "Awaiting parts" ? "In repair" : job.status }, `Part issued: ${p.qty} × ${p.part}`);
 		toast(`${p.qty} × ${p.part} issued to ${job.tech}`);

@@ -1,14 +1,12 @@
-import { useEffect, useMemo, useState } from "react";
-import { useOpenParam } from "./store";
+import { useState } from "react";
 import {
 	items, productionWeek, stations,
 	batteries, swapStations, swapDaily, jobCards, pnl, pnlMonths, flowStages, rfidEvents, rfidHardware,
-	inr, lakh, crore, sum, warehouses,
+	lakh, crore, sum,
 } from "./data";
 import type { Item } from "./data";
-import { Page, Panel, Stat, Stats, Badge, Table, Chart, HBars, Bar, Cell, Tabs, Drawer, Facts, Timeline, Search, toast } from "./ui";
+import { Page, Panel, Stat, Stats, Badge, Table, Chart, HBars, Cell, Tabs, Facts, toast } from "./ui";
 import { go } from "./nav";
-import { Transfers, PhysicalCount, Reconciliation } from "./pagesExtra";
 
 // ================= Dashboard =================
 export function Dashboard() {
@@ -229,68 +227,3 @@ export function MaterialFlow() {
 	);
 }
 
-// ================= Inventory =================
-export function Inventory() {
-	const [wh, setWh] = useState("All locations");
-	const [q, setQ] = useState("");
-	const [sel, setSel] = useState<Item | null>(null);
-	const openI = useOpenParam();
-	useEffect(() => { const i = items.find((x) => x.code === openI.id); if (i) setSel(i); }, [openI]);
-	const [tab, setTab] = useState<"Stock" | "Transfers" | "Physical count" | "Reconciliation">("Stock");
-	const rows = useMemo(() => items.filter((i) => (wh === "All locations" || i.warehouse === wh) && (i.name + i.code).toLowerCase().includes(q.toLowerCase())), [wh, q]);
-	const value = sum(items.map((i) => i.onHand * i.unitCost));
-	return (
-		<Page title="Inventory & warehouses" sub="Stock across the central warehouse, line-side and site stores"
-			actions={<><button className="btn ghost" onClick={() => toast("Stock transfer TR-0931 drafted")}>Transfer stock</button><button className="btn" onClick={() => toast("Exported inventory_08-Oct-2026.xlsx")}>Export</button></>}>
-			<Stats>
-				<Stat label="Inventory value" value={lakh(value)} delta={`${items.length} SKUs across ${warehouses.length} locations`} />
-				<Stat label="Below minimum" value={String(items.filter((i) => i.onHand < i.min).length)} delta="Production at risk" tone="bad" />
-				<Stat label="Slow or non-moving" value={lakh(sum(items.filter((i) => i.ageDays > 120).map((i) => i.onHand * i.unitCost)))} delta="Over 120 days" tone="warn" />
-				<Stat label="Stock accuracy" value="98.7%" delta="RFID cycle counts" tone="good" />
-			</Stats>
-			<div className="page-tabs"><Tabs tabs={["Stock", "Transfers", "Physical count", "Reconciliation"] as const} value={tab} onChange={setTab} /></div>
-			{tab === "Transfers" && <Panel title="Stock transfers" note="Moves between warehouses, line-side and site stores"><Transfers /></Panel>}
-			{tab === "Physical count" && <Panel title="Physical stock verification" note="Cycle counts by RFID handheld, fixed reader or barcode"><PhysicalCount /></Panel>}
-			{tab === "Reconciliation" && <Panel title="Inventory reconciliation" note="System stock against counted stock, with reasons and adjustments"><Reconciliation /></Panel>}
-			{tab === "Stock" && <Panel right={
-				<div className="filters">
-					<Search value={q} onChange={setQ} placeholder="Search item or code" />
-					<select value={wh} onChange={(e) => setWh(e.target.value)} aria-label="Location">
-						<option>All locations</option>
-						{warehouses.map((w) => <option key={w}>{w}</option>)}
-					</select>
-				</div>
-			}>
-				<Table cols={[
-					{ key: "code", label: "Code", hideSm: true },
-					{ key: "name", label: "Item" },
-					{ key: "warehouse", label: "Location", hideSm: true, render: (r: Item) => <>{r.warehouse}<small className="sub"> · {r.bin}</small></> },
-					{ key: "onHand", label: "On hand", num: true, render: (r: Item) => `${r.onHand.toLocaleString("en-IN")} ${r.uom}` },
-					{ key: "lvl", label: "Min / max", hideSm: true, render: (r: Item) => <span className="inline-bar"><Bar pct={(r.onHand / r.max) * 100} tone={r.onHand < r.min ? "bad" : r.onHand > r.max ? "warn" : "accent"} /></span> },
-					{ key: "val", label: "Value", num: true, hideSm: true, render: (r: Item) => inr(r.onHand * r.unitCost) },
-					{ key: "age", label: "Age", num: true, hideSm: true, render: (r: Item) => `${r.ageDays} d` },
-					{ key: "st", label: "Status", render: (r: Item) => { const s = stockState(r); return s === "OK" ? <span className="sub">OK</span> : <Badge tone={s === "Below min" || s === "Reorder" ? "bad" : "warn"}>{s}</Badge>; } },
-				]} rows={rows} onRow={setSel} />
-				{rows.length === 0 && <p className="empty">No items match “{q}”. Clear the search to see all stock.</p>}
-			</Panel>}
-			<Drawer open={!!sel} onClose={() => setSel(null)} title={sel?.name ?? ""} sub={sel ? `${sel.code} · ${sel.category}` : ""}>
-				{sel && (
-					<>
-						<Facts rows={[
-							["On hand", `${sel.onHand.toLocaleString("en-IN")} ${sel.uom}`], ["Reserved for work orders", `${Math.round(sel.onHand * 0.3)} ${sel.uom}`],
-							["Min / reorder / max", `${sel.min} / ${sel.reorder} / ${sel.max}`], ["Location", `${sel.warehouse}, bin ${sel.bin}`],
-							["Tracking", `${sel.tracking}${sel.rfid ? " + RFID" : ""}`], ["Unit cost", inr(sel.unitCost)], ["Value", inr(sel.onHand * sel.unitCost)], ["Oldest stock", `${sel.ageDays} days`],
-						]} />
-						<h3 className="mini">Recent movements</h3>
-						<Timeline items={[
-							{ when: "08 Oct 08:02", what: `Issued 40 ${sel.uom}`, where: "Line 1", detail: "Against WO-7731" },
-							{ when: "06 Oct 15:30", what: `Received 300 ${sel.uom}`, where: "Gate G1", detail: "GRN-88131, inspection passed" },
-							{ when: "03 Oct 11:10", what: `Transferred 60 ${sel.uom}`, where: "Pune site WH", detail: "TR-0927" },
-							{ when: "30 Sep", what: "Physical count", detail: "Variance 0 — matched" },
-						]} />
-					</>
-				)}
-			</Drawer>
-		</Page>
-	);
-}

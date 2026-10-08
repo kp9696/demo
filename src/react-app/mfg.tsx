@@ -4,15 +4,16 @@ import { productionWeek, stations, workOrders, items, models, sum } from "./data
 import { Page, Panel, Stat, Stats, Badge, Table, Chart, HBars, Bar, Tabs, Drawer, Facts, Timeline, toast } from "./ui";
 import { Mrp, FinishedGoods } from "./pagesExtra";
 import { usePersist } from "./store";
+import { useStock, CENTRAL, LINE } from "./stock";
 
 // ---------- shared data ----------
-type WO = { no: string; model: string; qty: number; done: number; line: string; due: string; status: string };
+export type WO = { no: string; model: string; qty: number; done: number; line: string; due: string; status: string };
 const lines = ["Line 1", "Line 2"] as const;
 const capacity: Record<string, number> = { "Line 1": 120, "Line 2": 140 };
 const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
 
 /** Parts each vehicle needs, with quantity per vehicle. */
-const kit: [string, number][] = [
+export const kit: [string, number][] = [
 	["Hub motor 2.5 kW", 1], ["Motor controller 48V", 1], ["Main frame — S1", 1], ["Front fork assembly", 1], ["Rear shock absorber", 1],
 	["Wiring harness main", 1], ["TFT cluster 5in", 1], ["Alloy wheel 12in", 2], ["Tyre 90/90-12 tubeless", 2], ["Disc brake kit 220mm", 1], ["Seat assembly", 1], ["Headlamp LED unit", 1],
 ];
@@ -22,8 +23,8 @@ const baseIssued = (wo: string, part: string) => (wo === "WO-7731" ? 100 : wo ==
 /** Parts issued during this demo, so store stock can go down and line-side stock up. */
 const demoIssued = (issued: Record<string, Record<string, number>>, part: string, woFilter?: (wo: string) => boolean) =>
 	Object.entries(issued).filter(([wo]) => !woFilter || woFilter(wo)).reduce((a, [wo, m]) => a + Math.max(0, (m[part] ?? 0) - baseIssued(wo, part)), 0);
-function useWOs() { return usePersist<WO[]>("workorders", workOrders); }
-function useIssued() { return usePersist<Record<string, Record<string, number>>>("issued", { "WO-7731": Object.fromEntries(kit.map(([p, q]) => [p, 100 * q])), "WO-7733": Object.fromEntries(kit.map(([p, q]) => [p, 30 * q])) }); }
+export function useWOs() { return usePersist<WO[]>("workorders", workOrders); }
+export function useIssued() { return usePersist<Record<string, Record<string, number>>>("issued", { "WO-7731": Object.fromEntries(kit.map(([p, q]) => [p, 100 * q])), "WO-7733": Object.fromEntries(kit.map(([p, q]) => [p, 30 * q])) }); }
 
 // ---------- Production page ----------
 const tabs = ["Production plan", "Work orders", "MRP", "Material issue", "Line-side stock", "Bill of materials", "Quality & rework", "Finished goods"] as const;
@@ -229,10 +230,11 @@ function MaterialIssue() {
 	const [woNo, setWoNo] = useState(open[0]?.no ?? "");
 	const wo = wos.find((w) => w.no === woNo);
 	const [qtys, setQtys] = useState<Record<string, string>>({});
+	const { qty, post: postStock } = useStock();
 	if (!wo) return <p className="empty">No released work orders. Release one from the Work orders tab to issue parts.</p>;
 	const got = issued[wo.no] ?? {};
 	const rows = kit.map(([p, q]) => {
-		const need = q * wo.qty, has = got[p] ?? 0, stock = Math.max(0, (itemByName(p)?.onHand ?? 0) - demoIssued(issued, p));
+		const need = q * wo.qty, has = got[p] ?? 0, stock = Math.max(0, qty(itemByName(p)!.code, CENTRAL));
 		const remaining = Math.max(0, need - has);
 		const next = Math.min(remaining, q * 20);
 		return { p, need, has, stock, remaining, next };
@@ -242,9 +244,16 @@ function MaterialIssue() {
 		rows.forEach((r) => { const v = Math.max(0, Math.min(r.remaining, Number(qtys[r.p] ?? r.next) || 0)); if (v) add[r.p] = v; });
 		const total = Object.values(add).reduce((a, b) => a + b, 0);
 		if (!total) { toast("Nothing to issue. Every part for this order is already on the line."); return; }
+		const shortOf = rows.filter((r) => (add[r.p] ?? 0) > r.stock);
+		if (shortOf.length) { toast(`Not enough in Central WH for ${shortOf.map((r) => r.p).join(", ")} — lower the quantity or wait for receipts`); return; }
+		const mi = `MI-${2200 + Math.floor(Math.random() * 99)}`;
+		postStock(Object.entries(add).flatMap(([p, v]) => { const code = itemByName(p)!.code; return [
+			{ type: "Issue to line" as const, code, loc: CENTRAL, qty: -v, ref: mi, by: "Stores — Hosur", note: `For ${wo.no}` },
+			{ type: "Line receipt" as const, code, loc: LINE, qty: v, ref: mi, by: wo.line, note: `For ${wo.no}` },
+		]; }));
 		setIssued((m) => ({ ...m, [wo.no]: Object.fromEntries(kit.map(([p]) => [p, (m[wo.no]?.[p] ?? 0) + (add[p] ?? 0)])) }));
 		setQtys({});
-		toast(`Issue note MI-${2200 + Math.floor(Math.random() * 99)} posted — ${total} parts moved from Central WH to ${wo.line} line-side`);
+		toast(`Issue note ${mi} posted — ${total} parts moved from Central WH to ${wo.line} line-side`);
 	};
 	return (
 		<>

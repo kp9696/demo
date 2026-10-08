@@ -7,17 +7,17 @@ import { usePersist, useOpenParam } from "./store";
 
 // ---------- live vehicle state ----------
 type Extra = { saleDate?: string; regDate?: string; rto?: string; insurer?: string; policy?: string; insExpiry?: string; phone?: string; dispatch?: string };
-type V = Vehicle & Extra & { idx: number };
+export type V = Vehicle & Extra & { idx: number };
 type Dispatch = { no: string; dealer: string; vins: string[]; truck: string; date: string; status: "In transit" | "Delivered" };
 
-function useOverrides() { return usePersist<Record<string, Partial<V>>>("vehOverrides", {}); }
+export function useOverrides() { return usePersist<Record<string, Partial<V>>>("vehOverrides", {}); }
 function useDispatches() {
 	return usePersist<Dispatch[]>("dispatches", [
 		{ no: "DSP-2290", dealer: "Greenline Motors", vins: [vehicles[2].vin], truck: "KA-51-AB-2231", date: "07 Oct 2026", status: "In transit" },
 		{ no: "DSP-2284", dealer: "Capital EV Hub", vins: [vehicles[3].vin], truck: "HR-55-CD-7714", date: "04 Oct 2026", status: "Delivered" },
 	]);
 }
-function useVehicles(): V[] {
+export function useVehicles(): V[] {
 	const [ov] = useOverrides();
 	return useMemo(() => vehicles.map((v, idx) => ({ ...v, idx, ...(ov[v.vin] ?? {}) }) as V), [ov]);
 }

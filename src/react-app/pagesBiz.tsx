@@ -1,73 +1,10 @@
 import { useState } from "react";
-import { jobCards, warrantyClaims, complaints, dealers, pnl, pnlMonths, costCentres, approvals, inr, crore, sum } from "./data";
+import { pnl, pnlMonths, costCentres, approvals, inr, crore, sum } from "./data";
 import type { Approval } from "./data";
-import { Appointments, BuPnl } from "./pagesExtra";
+import { BuPnl } from "./pagesExtra";
 import { usePersist } from "./store";
 import { useRfqs } from "./rfq";
-import { Page, Panel, Stat, Stats, Badge, Table, Chart, Bar, Tabs, Facts, toast } from "./ui";
-
-// ================= Dealer & service =================
-export function Service() {
-	const [tab, setTab] = useState<"Job cards" | "Appointments" | "Warranty claims" | "Dealers" | "Complaints">("Job cards");
-	return (
-		<Page title="Dealers & service" sub="Job cards, warranty and dealer performance across 5 dealers"
-			actions={<button className="btn" onClick={() => toast("Job card JC-31205 opened for VIN …052150")}>New job card</button>}>
-			<Stats>
-				<Stat label="Open service jobs" value="51" delta="9 waiting for parts" tone="warn" />
-				<Stat label="Closed this month" value="412" delta="+8% vs September" tone="good" />
-				<Stat label="Average turnaround" value="7.1 h" delta="Target 6 h" tone="warn" />
-				<Stat label="Service revenue (Sep)" value={crore(pnl.serviceRevenue[5] + pnl.sparesRevenue[5])} delta="Labour + spares" />
-			</Stats>
-			<Panel right={<Tabs tabs={["Job cards", "Appointments", "Warranty claims", "Dealers", "Complaints"] as const} value={tab} onChange={setTab} />}>
-				{tab === "Job cards" && (
-					<div className="kanban">
-						{["Diagnosis", "Awaiting parts", "Warranty approval", "In repair", "Ready for delivery", "Closed"].map((col) => (
-							<div key={col} className="kan-col">
-								<h3>{col}<span>{jobCards.filter((j) => j.status === col).length}</span></h3>
-								{jobCards.filter((j) => j.status === col).map((j) => (
-									<article key={j.no} className="kan-card">
-										<b>{j.complaint}</b>
-										<small>{j.no} · VIN {j.vin}</small>
-										<small>{j.customer} · {j.dealer}</small>
-										<footer><span>{j.tech}</span><span>{j.age}</span>{j.warranty && <Badge tone="info">Warranty</Badge>}</footer>
-									</article>
-								))}
-							</div>
-						))}
-					</div>
-				)}
-				{tab === "Appointments" && <Appointments />}
-				{tab === "Warranty claims" && (
-					<Table cols={[
-						{ key: "no", label: "Claim" }, { key: "part", label: "Part" }, { key: "dealer", label: "Dealer", hideSm: true },
-						{ key: "amount", label: "Amount", num: true, render: (r) => inr(r.amount) },
-						{ key: "status", label: "Status", render: (r) => <Badge>{r.status}</Badge> },
-						{ key: "a", label: "", render: (r) => r.status !== "Approved" ? <button className="btn sm ghost" onClick={(e) => { e.stopPropagation(); toast(`${r.no} approved — credit note raised`); }}>Approve</button> : null },
-					]} rows={warrantyClaims} />
-				)}
-				{tab === "Dealers" && (
-					<Table cols={[
-						{ key: "name", label: "Dealer", render: (r) => <>{r.name}<small className="sub"> · {r.city}</small></> },
-						{ key: "sold", label: "Sold (Sep)", num: true }, { key: "stock", label: "Stock", num: true, hideSm: true },
-						{ key: "openJobs", label: "Open jobs", num: true, hideSm: true },
-						{ key: "tat", label: "Turnaround", num: true, render: (r) => <span className={r.tat > 8 ? "neg" : ""}>{r.tat} h</span> },
-						{ key: "csat", label: "Rating", num: true, hideSm: true },
-						{ key: "revenue", label: "Revenue", num: true, render: (r) => crore(r.revenue) },
-					]} rows={dealers} />
-				)}
-				{tab === "Complaints" && (
-					<div className="split">
-						<Chart labels={complaints.map((c) => c.cat.split(" ")[0])} stacked series={[
-							{ name: "Closed", values: complaints.map((c) => c.closed), tone: "accent" },
-							{ name: "Open", values: complaints.map((c) => c.open), tone: "warn" },
-						]} />
-						<Facts rows={complaints.map((c) => [c.cat, `${c.open} open · ${c.closed} closed`] as [string, string])} />
-					</div>
-				)}
-			</Panel>
-		</Page>
-	);
-}
+import { Page, Panel, Stat, Stats, Table, Chart, Bar, Tabs, toast } from "./ui";
 
 // ================= Finance =================
 export function Finance() {

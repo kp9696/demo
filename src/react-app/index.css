@@ -601,3 +601,19 @@ table.plan small { font-weight: 500; }
 .alerts { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
 .alerts li { display: flex; gap: 10px; align-items: center; }
 .drawer .tabs { margin-bottom: 4px; }
+
+/* ---------- service module ---------- */
+.kan-btn { text-align: left; cursor: pointer; font: inherit; color: inherit; width: 100%; }
+.kan-btn:hover { border-color: var(--accent); }
+.inline-add { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.inline-add .search { flex: 1; min-width: 180px; }
+.inline-add select { max-width: 100%; }
+.mini-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 14px; }
+.mini-stats span { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; }
+.mini-stats small { color: var(--ink-3); }
+.mini-stats b { font-size: 18px; }
+.cmp-list { list-style: none; margin: 10px 0 0; padding: 0; }
+.cmp-list li { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.cmp-list li > div:first-child { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.cmp-list small { color: var(--ink-3); }
+.cmp-act { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }

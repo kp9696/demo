@@ -211,7 +211,7 @@ export const vehicles: Vehicle[] = Array.from({ length: 30 }, (_, i) => {
 	const sold = status === "Sold" || status === "In service";
 	return {
 		vin: `MD9ZS1P26A0${(52100 + i * 3).toString()}`,
-		model: models[i % models.length], colour: pick(colours),
+		model: models[(i + Math.floor(i / 8)) % models.length], colour: pick(colours),
 		mfg: `${int(1, 28)} ${pick(["Jul", "Aug", "Sep"])} 2026`,
 		battery: status === "In production" ? "—" : batteries[(i * 3) % batteries.length].id,
 		dealer: status === "In production" || status === "Finished goods" ? "—" : d.name,

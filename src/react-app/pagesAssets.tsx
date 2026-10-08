@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useOpenParam } from "./store";
 import { AllocateDrawer, AllocationList, RebalanceDrawer, RebalanceList, useRebal, useStationAdj } from "./batteryOps";
-import { damage, batteries, batteryHistory, vehicles, swapStations, swapDaily, swapTransactions, cities, inr, lakh, sum } from "./data";
-import type { Battery, Vehicle } from "./data";
+import { batteries, batteryHistory, swapStations, swapDaily, swapTransactions, cities, inr, lakh, sum } from "./data";
+import type { Battery } from "./data";
 import { Page, Panel, Stat, Stats, Badge, Table, Chart, HBars, Cell, Tabs, Drawer, Facts, Timeline, Search } from "./ui";
 
 // ================= Batteries =================
@@ -73,82 +73,6 @@ export function Batteries() {
 				)}
 			</Drawer>
 		</Page>
-	);
-}
-
-// ================= Vehicles =================
-const vStages = ["All", "In production", "Finished goods", "Dispatched", "At dealer", "Sold", "In service"] as const;
-export function Vehicles() {
-	const [f, setF] = useState<(typeof vStages)[number]>("All");
-	const [q, setQ] = useState("");
-	const [sel, setSel] = useState<Vehicle | null>(null);
-	const open = useOpenParam();
-	useEffect(() => { const v = vehicles.find((x) => x.vin === open.id); if (v) setSel(v); }, [open]);
-	const rows = vehicles.filter((v) => (f === "All" || v.status === f) && (v.vin + v.reg + v.customer).toLowerCase().includes(q.toLowerCase()));
-	return (
-		<Page title="Vehicles" sub="One digital record per vehicle, from the first part fitted to the latest service">
-			<Stats>
-				<Stat label="Built (FY to date)" value="31,482" delta="+18% vs last year" tone="good" />
-				<Stat label="In production" value="90" delta="Line 1 and Line 2" />
-				<Stat label="Dispatched this month" value="1,936" delta="To 5 dealers" />
-				<Stat label="Under warranty" value="24,110" delta="37 open claims" tone="warn" />
-			</Stats>
-			<Panel right={
-				<div className="filters">
-					<Search value={q} onChange={setQ} placeholder="VIN, registration or customer" />
-					<select value={f} onChange={(e) => setF(e.target.value as typeof f)} aria-label="Stage">{vStages.map((x) => <option key={x}>{x}</option>)}</select>
-				</div>
-			}>
-				<Table cols={[
-					{ key: "vin", label: "VIN" },
-					{ key: "model", label: "Model", render: (r: Vehicle) => <>{r.model}<small className="sub"> · {r.colour}</small></> },
-					{ key: "battery", label: "Battery", hideSm: true },
-					{ key: "dealer", label: "Dealer", hideSm: true },
-					{ key: "reg", label: "Registration", hideSm: true },
-					{ key: "status", label: "Stage", render: (r: Vehicle) => <Badge>{r.status}</Badge> },
-				]} rows={rows} onRow={setSel} />
-				{rows.length === 0 && <p className="empty">No vehicles match. Clear the search or pick another stage.</p>}
-			</Panel>
-			<Drawer open={!!sel} onClose={() => setSel(null)} title={sel?.model ?? ""} sub={sel?.vin}>
-				{sel && <VehicleRecord v={sel} />}
-			</Drawer>
-		</Page>
-	);
-}
-function VehicleRecord({ v }: { v: Vehicle }) {
-	const [tab, setTab] = useState<"Overview" | "Components" | "History" | "Damage & repairs">("Overview");
-	return (
-		<>
-			<Tabs tabs={["Overview", "Components", "History", "Damage & repairs"] as const} value={tab} onChange={setTab} />
-			{tab === "Overview" && (
-				<Facts rows={[
-					["Stage", <Badge>{v.status}</Badge>], ["Colour", v.colour], ["Manufactured", `${v.mfg}, Hosur Line 1`], ["Battery fitted", v.battery],
-					["Dealer", v.dealer], ["Customer", v.customer], ["Registration", v.reg], ["Odometer", `${v.odo.toLocaleString("en-IN")} km`],
-					["Warranty", v.warranty], ["Telematics", v.status === "Sold" ? `Last ping 4 min ago · ${v.city}` : "Not active"],
-				]} />
-			)}
-			{tab === "Components" && (
-				<Table dense cols={[{ key: "p", label: "Component" }, { key: "s", label: "Serial / batch" }, { key: "v", label: "Vendor" }]} rows={[
-					{ p: "Hub motor 2.5 kW", s: "HM25-88310", v: "Shakti Motors" },
-					{ p: "Motor controller 48V", s: "MC48-55102", v: "NexBoard" },
-					{ p: "Main frame", s: "FR-S1-26-04417", v: "Precision Frames" },
-					{ p: "TFT cluster 5in", s: "TFT5-20931", v: "NexBoard" },
-					{ p: "IoT telematics unit", s: "IOT-77120", v: "NexBoard" },
-					{ p: "Tyres (2)", s: "Batch RT-2609-B", v: "Rapid Tyres" },
-					{ p: "Battery pack", s: v.battery, v: "Voltcell Energy" },
-				]} />
-			)}
-			{tab === "Damage & repairs" && (v.odo > 0 ? <Timeline items={damage} /> : <p className="empty">No accident or damage records. Records appear here when a dealer logs one on a job card.</p>)}
-			{tab === "History" && (
-				<Timeline items={[
-					...(v.status === "In service" ? [{ when: "08 Oct", what: "In for service", where: "Dealer workshop", detail: "JC-31204 · range complaint" }] : []),
-					...(v.odo > 0 ? [{ when: "21 Sep", what: "Battery swapped", where: "Koramangala 5th Block", detail: "Swap #41 for this vehicle" }, { when: "02 Sep", what: "First service", detail: "1,000 km check · no issues" }, { when: "11 Aug", what: "Sold & registered", detail: `${v.customer} · ${v.reg}` }] : []),
-					...(v.dealer !== "—" ? [{ when: "02 Aug", what: "Delivered to dealer", where: v.dealer }] : []),
-					{ when: v.mfg, what: "End-of-line test passed", detail: "EOL-31984 · brake, lights, range sim" },
-					{ when: v.mfg, what: "Assembled", where: "Hosur Line 1", detail: "26 components scanned in" },
-				]} />
-			)}
-		</>
 	);
 }
 

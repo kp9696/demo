@@ -585,3 +585,19 @@ table.plan small { font-weight: 500; }
 .alloc-preview .hint { margin: 0; }
 .rw-btns { display: inline-flex; gap: 6px; }
 @media (max-width: 860px) { .inline-label { flex-direction: column; align-items: stretch; } .inline-label select { max-width: 100%; } }
+.chart .mark.dark { fill: var(--side); }
+.key.dark { background: var(--side); }
+.pick-list { list-style: none; margin: 0; padding: 0; border: 1px solid var(--line); border-radius: 10px; max-height: 320px; overflow-y: auto; }
+.pick-list li + li { border-top: 1px solid var(--line); }
+.pick-list label { display: flex; gap: 10px; align-items: center; padding: 10px 12px; cursor: pointer; }
+.pick-list span { display: flex; flex-direction: column; }
+.pick-list small { color: var(--ink-3); }
+.inline-col { display: flex; flex-direction: column; gap: 5px; font-size: 13px; color: var(--ink-2); }
+.inline-col select, .inline-col .search { width: 100%; }
+.city-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; margin-bottom: 14px; }
+.city-card { border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; display: flex; flex-direction: column; gap: 2px; }
+.city-card span { font-size: 20px; font-weight: 600; }
+.city-card small { color: var(--ink-3); }
+.alerts { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.alerts li { display: flex; gap: 10px; align-items: center; }
+.drawer .tabs { margin-bottom: 4px; }
